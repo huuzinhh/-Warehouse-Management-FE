@@ -1,9 +1,16 @@
+// src/App.jsx
 import React from "react";
 import { RouterProvider } from "react-router-dom";
+import { App as AntdApp } from "antd";
 import router from "./routes";
-import "antd/dist/reset.css";
-import "./index.css";
+import ToastProvider from "./providers/ToastProvider";
 
 export default function App() {
-  return <RouterProvider router={router} />;
+  return (
+    <AntdApp>
+      <ToastProvider>
+        <RouterProvider router={router} />
+      </ToastProvider>
+    </AntdApp>
+  );
 }

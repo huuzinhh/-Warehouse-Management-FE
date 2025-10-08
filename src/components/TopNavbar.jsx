@@ -1,125 +1,159 @@
 import React, { useState } from "react";
-import { Layout, Input, Avatar, Menu } from "antd";
+import { Layout, Input, Avatar, Menu, Dropdown } from "antd";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   UserOutlined,
   TeamOutlined,
-  AppstoreAddOutlined,
   TagsOutlined,
   RetweetOutlined,
   ShopOutlined,
   DatabaseOutlined,
   EnvironmentOutlined,
-  SolutionOutlined,
+  AuditOutlined,
+  UserSwitchOutlined,
+  DashboardOutlined,
+  SafetyCertificateOutlined,
+  ShoppingOutlined,
+  SettingOutlined,
   LoginOutlined,
   LogoutOutlined,
-  SettingOutlined,
-  HomeOutlined,
+  ToolOutlined,
 } from "@ant-design/icons";
+import AuthService from "../service/AuthenticationService";
 
 const { Header } = Layout;
-const { Search } = Input;
 
 export default function TopNavbar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const [isLoggedIn, setIsLoggedIn] = useState(false); // 👈 kiểm soát login/logout
+
   const selectedKey =
     location.pathname === "/" ? "home" : location.pathname.replace("/", "");
 
   const handleLogout = () => {
-    setIsLoggedIn(false);
-    navigate("/");
-  };
-
-  const handleLogin = () => {
-    setIsLoggedIn(true);
+    AuthService.logout();
     navigate("/login");
   };
 
-  const menuItems = [
+  const handleLogin = () => {
+    navigate("/");
+  };
+
+  // Menu chính (ở giữa thanh navbar)
+  const mainMenuItems = [
     {
       key: "home",
-      label: <NavLink to="/">Trang chủ</NavLink>,
-      icon: <HomeOutlined />,
+      label: <NavLink to="/">Tổng quan</NavLink>,
+      icon: <DashboardOutlined />,
     },
     {
       key: "users",
-      label: "Người dùng & Phân quyền",
+      label: "Người dùng & Quyền",
       icon: <TeamOutlined />,
       children: [
-        { key: "users-list", label: <NavLink to="/users">Người dùng</NavLink>, icon: <UserOutlined /> },
-        { key: "roles", label: <NavLink to="/roles">Vai trò</NavLink>, icon: <SolutionOutlined /> },
-        { key: "users-roles", label: <NavLink to="/users-roles">Gán quyền</NavLink>, icon: <RetweetOutlined /> },
+        {
+          key: "users-list",
+          label: <NavLink to="/users">Người dùng</NavLink>,
+          icon: <UserOutlined />,
+        },
+        {
+          key: "roles",
+          label: <NavLink to="/roles">Vai trò</NavLink>,
+          icon: <SafetyCertificateOutlined />,
+        },
       ],
     },
     {
       key: "products",
       label: "Sản phẩm & Danh mục",
-      icon: <AppstoreAddOutlined />,
+      icon: <ShoppingOutlined />,
       children: [
-        { key: "products-list", label: <NavLink to="/products">Sản phẩm</NavLink>, icon: <AppstoreAddOutlined /> },
-        { key: "categories", label: <NavLink to="/categories">Danh mục</NavLink>, icon: <TagsOutlined /> },
-        { key: "unit-conversions", label: <NavLink to="/unit-conversions">Quy đổi đơn vị</NavLink>, icon: <RetweetOutlined /> },
-        { key: "suppliers", label: <NavLink to="/suppliers">Nhà cung cấp</NavLink>, icon: <ShopOutlined /> },
+        {
+          key: "products-list",
+          label: <NavLink to="/products">Sản phẩm</NavLink>,
+          icon: <ShoppingOutlined />,
+        },
+        {
+          key: "categories",
+          label: <NavLink to="/categories">Danh mục</NavLink>,
+          icon: <TagsOutlined />,
+        },
+        {
+          key: "unit-conversions",
+          label: <NavLink to="/unit-conversions">Quy đổi đơn vị</NavLink>,
+          icon: <RetweetOutlined />,
+        },
       ],
     },
     {
-      key: "warehouses",
-      label: "Kho & Vị trí lưu trữ",
-      icon: <DatabaseOutlined />,
+      key: "partners",
+      label: "Đối tác",
+      icon: <UserSwitchOutlined />,
       children: [
-        { key: "warehouse-list", label: <NavLink to="/warehouses">Kho hàng</NavLink>, icon: <DatabaseOutlined /> },
-        { key: "locations", label: <NavLink to="/locations">Vị trí trong kho</NavLink>, icon: <EnvironmentOutlined /> },
-      ],
-    },
-    {
-      key: "customers",
-      label: "Khách hàng",
-      icon: <TeamOutlined />,
-      children: [
-        { key: "customers-list", label: <NavLink to="/customers">Danh sách khách hàng</NavLink>, icon: <UserOutlined /> },
+        {
+          key: "customers",
+          label: <NavLink to="/customers">Khách hàng</NavLink>,
+          icon: <UserOutlined />,
+        },
+        {
+          key: "suppliers",
+          label: <NavLink to="/suppliers">Nhà cung cấp</NavLink>,
+          icon: <ShopOutlined />,
+        },
       ],
     },
     {
       key: "inventory",
-      label: "Nhập – Xuất kho",
-      icon: <RetweetOutlined />,
+      label: "Kho hàng",
+      icon: <DatabaseOutlined />,
       children: [
-        { key: "imports", label: <NavLink to="/imports">Phiếu nhập hàng</NavLink>, icon: <LoginOutlined /> },
-        { key: "exports", label: <NavLink to="/exports">Phiếu xuất hàng</NavLink>, icon: <LogoutOutlined /> },
-      ],
-    },
-    {
-      key: "system",
-      label: "Hệ thống",
-      icon: <SettingOutlined />,
-      children: [
-        { key: "admin-accounts", label: <NavLink to="/admin-accounts">Tài khoản admin</NavLink>, icon: <UserOutlined /> },
-        { key: "settings", label: <NavLink to="/settings">Cấu hình chung</NavLink>, icon: <SettingOutlined /> },
-        // ✅ Hiển thị login hoặc logout tùy trạng thái
-        isLoggedIn
-          ? {
-              key: "logout",
-              label: (
-                <span onClick={handleLogout} style={{ color: "red" }}>
-                  Đăng xuất
-                </span>
-              ),
-              icon: <LogoutOutlined />,
-            }
-          : {
-              key: "login",
-              label: (
-                <span onClick={handleLogin} style={{ color: "green" }}>
-                  Đăng nhập
-                </span>
-              ),
-              icon: <LoginOutlined />,
-            },
+        {
+          key: "imports",
+          label: <NavLink to="/imports">Nhập kho</NavLink>,
+          icon: <LoginOutlined />,
+        },
+        {
+          key: "exports",
+          label: <NavLink to="/exports">Xuất kho</NavLink>,
+          icon: <LogoutOutlined />,
+        },
+        {
+          key: "adjustments",
+          label: <NavLink to="/adjustments">Kiểm kê</NavLink>,
+          icon: <AuditOutlined />,
+        },
+        {
+          key: "locations",
+          label: <NavLink to="/locations">Vị trí kho</NavLink>,
+          icon: <EnvironmentOutlined />,
+        },
       ],
     },
   ];
+
+  // Menu cá nhân (dropdown ở avatar)
+  const userMenu = (
+    <Menu
+      items={[
+        {
+          key: "profile",
+          label: <NavLink to="/admin-accounts">Thông tin cá nhân</NavLink>,
+          icon: <UserOutlined />,
+        },
+        { type: "divider" },
+        {
+          key: "logout",
+          label: (
+            <span onClick={handleLogout} style={{ color: "red" }}>
+              Đăng xuất
+            </span>
+          ),
+          icon: <LogoutOutlined />,
+        },
+      ]}
+    />
+  );
+
 
   return (
     <Header
@@ -135,28 +169,49 @@ export default function TopNavbar() {
       {/* Logo */}
       <div
         style={{
-          fontWeight: "bold",
-          fontSize: 18,
-          color: "#001529",
+          display: "flex",
+          alignItems: "center",
           marginRight: 30,
         }}
       >
-        📦 Warehouse
+        <img
+          src="/src/assets/logo_anvinh.png"
+          alt="Warehouse Logo"
+          style={{ height: 100, objectFit: "contain" }}
+        />
       </div>
 
-      {/* Menu */}
+      {/* Menu chính */}
       <Menu
         mode="horizontal"
-        style={{ flex: "none" }}
+        style={{
+          flex: 1,
+          fontWeight: 500,
+          minWidth: 0
+        }}
         selectedKeys={[selectedKey]}
-        items={menuItems}
+        items={mainMenuItems}
       />
 
-      {/* Search + Avatar */}
-      <div style={{ display: "flex", alignItems: "center", marginLeft: "auto" }}>
-        <Search placeholder="Tìm kiếm..." style={{ width: 200, marginRight: 16 }} />
-        <Avatar icon={<UserOutlined />} />
-      </div>
+      {/* Avatar + Dropdown cá nhân */}
+      <Dropdown overlay={userMenu} placement="bottomRight" arrow>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            marginLeft: "auto",
+            cursor: "pointer",
+            gap: 8,
+          }}
+        >
+          <Avatar
+            size="large"
+            style={{ backgroundColor: "#1677ff" }}
+            icon={<UserOutlined />}
+          />
+          <span style={{ fontWeight: 500 }}>Admin</span>
+        </div>
+      </Dropdown>
     </Header>
   );
 }
