@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Form, Input, Button, Card, message } from "antd";
 import { UserOutlined, LockOutlined } from "@ant-design/icons";
+import AuthService from "../service/AuthenticationService";
 
 export default function Login() {
   const [loading, setLoading] = useState(false);
@@ -8,25 +9,19 @@ export default function Login() {
   const onFinish = async (values) => {
     setLoading(true);
     try {
-      // Gọi API login
-      const res = await fetch("http://localhost:8080/api/user/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
-      });
-
-      if (!res.ok) throw new Error("Login failed");
-
-      const data = await res.json();
+      // Gọi service đăng nhập
+      await AuthService.login(values);
+      
       message.success("Đăng nhập thành công 🎉");
-
-      // Lưu token hoặc user info vào localStorage
-      localStorage.setItem("user", JSON.stringify(data));
-
-      // Chuyển hướng
-      window.location.href = "/";
+      
+      // Chuyển hướng sau 1 giây
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 1000);
+      
     } catch (err) {
-      message.error("Sai tài khoản hoặc mật khẩu!");
+      console.error("Login error:", err);
+      message.error(err.message || "Sai tài khoản hoặc mật khẩu!");
     } finally {
       setLoading(false);
     }
@@ -43,7 +38,7 @@ export default function Login() {
       }}
     >
       <Card
-        title="📦 Warehouse Login"
+        title="Warehouse Login"
         bordered={false}
         style={{ width: 350 }}
       >
@@ -54,6 +49,7 @@ export default function Login() {
           layout="vertical"
         >
           <Form.Item
+            label="Username"
             name="username"
             rules={[{ required: true, message: "Vui lòng nhập username!" }]}
           >
@@ -65,6 +61,7 @@ export default function Login() {
           </Form.Item>
 
           <Form.Item
+            label="Password"
             name="password"
             rules={[{ required: true, message: "Vui lòng nhập password!" }]}
           >
