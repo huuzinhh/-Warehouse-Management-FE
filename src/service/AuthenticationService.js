@@ -8,7 +8,7 @@ const AuthService = {
   login: async (accountData) => {
     try {
       const response = await axiosInstance.post(API_ENDPOINTS.auth.login, accountData);
-        console.log(response);
+        console.log("response" ,response);
 
       const token = response?.result;
         console.log("token: ", token)

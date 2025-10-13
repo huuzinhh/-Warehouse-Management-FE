@@ -24,7 +24,6 @@ axiosInstance.interceptors.request.use(
 axiosInstance.interceptors.response.use(
   (response) => {
     const apiResponse = response.data;
-    
     // Hiển thị toast thành công cho các method không phải GET
     if (apiResponse?.message && response.config.method !== "get") {
       toastService.success(apiResponse.message);

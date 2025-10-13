@@ -5,4 +5,7 @@ export const API_ENDPOINTS = {
     login: "/auth/login",
     logout: "/auth/logout"
   },
+  customer: {
+    create: "/api/customers",
+  }
 };
