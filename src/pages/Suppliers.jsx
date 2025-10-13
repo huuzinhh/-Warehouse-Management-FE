@@ -1,7 +1,25 @@
 import React, { useEffect, useState } from "react";
-import { Table, Button, Space, Switch, Tag, Modal, Form, Input, message } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined, UserOutlined, MailOutlined, PhoneOutlined, HomeOutlined } from "@ant-design/icons";
-import axiosInstance from "../service/axiosInstance"; 
+import {
+  Table,
+  Button,
+  Space,
+  Switch,
+  Tag,
+  Modal,
+  Form,
+  Input,
+  message,
+} from "antd";
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  UserOutlined,
+  MailOutlined,
+  PhoneOutlined,
+  HomeOutlined,
+} from "@ant-design/icons";
+import PartnerService from "../service/PartnerService";
 
 export default function Suppliers() {
   const [suppliers, setSuppliers] = useState([]);
@@ -12,53 +30,35 @@ export default function Suppliers() {
   const [deleteRecord, setDeleteRecord] = useState(null);
   const [form] = Form.useForm();
 
-  useEffect(() => {
-    fetchSuppliers();
-  }, []);
-
+  // 🔹 Lấy danh sách nhà cung cấp
   const fetchSuppliers = async () => {
     try {
       setLoading(true);
-      const apiResponse = await axiosInstance.get("/api/suppliers");
-      if (apiResponse.code === 1000 && Array.isArray(apiResponse.result)) {
-        const suppliersData = apiResponse.result.map(item => ({
+      const data = await PartnerService.getAll();
+      const suppliersData = data
+        .filter((item) => item.partnerType === "SUPPLIER")
+        .map((item) => ({
           id: item.id,
           name: item.name,
           email: item.email,
           phone: item.phone,
           address: item.address,
-          isActive: item.active // Ánh xạ active thành isActive cho toggle
+          isActive: item.active,
         }));
-        setSuppliers(suppliersData);
-      } else {
-        throw new Error("Dữ liệu không hợp lệ từ server");
-      }
+      setSuppliers(suppliersData);
     } catch (error) {
-      console.error("Lỗi khi lấy nhà cung cấp:", error);
+      console.error("Lỗi khi lấy danh sách nhà cung cấp:", error);
+      message.error("Không thể tải danh sách nhà cung cấp");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSwitchChange = async (checked, record) => {
-    try {
-      const apiResponse = await axiosInstance.put(`/api/suppliers/toggle/${record.id}`, {
-        active: checked
-      });
-      if (apiResponse.code === 1000) {
-        const updatedSuppliers = suppliers.map((supplier) =>
-          supplier.id === record.id ? { ...supplier, isActive: checked } : supplier
-        );
-        setSuppliers(updatedSuppliers);
-        message.success(`Nhà cung cấp ${record.name} đã được ${checked ? "bật" : "tắt"}`);
-      } else {
-        throw new Error("Cập nhật trạng thái thất bại");
-      }
-    } catch (error) {
-      console.error("Lỗi khi toggle trạng thái:", error);
-    }
-  };
+  useEffect(() => {
+    fetchSuppliers();
+  }, []);
 
+  // 🔹 Hiển thị modal thêm/sửa
   const showModal = (supplier = null) => {
     setEditingSupplier(supplier);
     if (supplier) {
@@ -66,7 +66,7 @@ export default function Suppliers() {
         name: supplier.name,
         email: supplier.email,
         phone: supplier.phone,
-        address: supplier.address
+        address: supplier.address,
       });
     } else {
       form.resetFields();
@@ -74,64 +74,59 @@ export default function Suppliers() {
     setIsModalVisible(true);
   };
 
+  // 🔹 Lưu khi submit modal
   const handleModalOk = async () => {
     try {
       const values = await form.validateFields();
-      let apiResponse;
+      const payload = {
+        name: values.name,
+        address: values.address,
+        phone: values.phone,
+        email: values.email,
+        partnerType: "SUPPLIER",
+      };
+
       if (editingSupplier) {
-        apiResponse = await axiosInstance.put(`/api/suppliers/${editingSupplier.id}`, {
-          name: values.name,
-          email: values.email,
-          phone: values.phone,
-          address: values.address,
-          active: editingSupplier.isActive
-        });
+        await PartnerService.update(editingSupplier.id, payload);
+        message.success("Cập nhật nhà cung cấp thành công");
       } else {
-        apiResponse = await axiosInstance.post("/api/suppliers", {
-          name: values.name,
-          email: values.email,
-          phone: values.phone,
-          address: values.address,
-          active: true
-        });
+        await PartnerService.create(payload);
+        message.success("Thêm nhà cung cấp thành công");
       }
-      if (apiResponse.code === 1000) {
-        setIsModalVisible(false);
-        fetchSuppliers();
-        message.success(apiResponse.message || (editingSupplier ? "Cập nhật thành công" : "Thêm thành công"));
-      } else {
-        throw new Error("Thao tác thất bại");
-      }
+
+      setIsModalVisible(false);
+      fetchSuppliers();
     } catch (error) {
       console.error("Lỗi khi thêm/sửa nhà cung cấp:", error);
+      message.error("Thao tác thất bại");
     }
   };
 
+  // 🔹 Xóa nhà cung cấp
   const showDeleteConfirm = (record) => {
     setDeleteRecord(record);
     setIsDeleteConfirmVisible(true);
-    console.log("Đang mở modal xóa cho:", record.name);
   };
 
   const handleDeleteConfirmOk = async () => {
-    if (deleteRecord) {
-      try {
-        const apiResponse = await axiosInstance.delete(`/api/suppliers/${deleteRecord.id}`);
-        if (apiResponse.code === 1000) {
-          setSuppliers(suppliers.filter((supplier) => supplier.id !== deleteRecord.id));
-          message.success(apiResponse.message || "Xóa thành công");
-        } else {
-          throw new Error("Xóa thất bại");
-        }
-      } catch (error) {
-        console.error("Lỗi khi xóa nhà cung cấp:", error);
-        message.error("Không thể xóa nhà cung cấp. Vui lòng thử lại!");
+    try {
+      if (deleteRecord) {
+        await PartnerService.delete(deleteRecord.id);
+        message.success("Xóa nhà cung cấp thành công");
+        setSuppliers((prev) =>
+          prev.filter((supplier) => supplier.id !== deleteRecord.id)
+        );
       }
+    } catch (error) {
+      console.error("Lỗi khi xóa nhà cung cấp:", error);
+      message.error("Không thể xóa nhà cung cấp");
+    } finally {
+      setIsDeleteConfirmVisible(false);
+      setDeleteRecord(null);
     }
-    setIsDeleteConfirmVisible(false);
-    setDeleteRecord(null);
   };
 
+  // 🔹 Cấu hình cột bảng
   const columns = [
     {
       title: "Mã NCC",
@@ -183,19 +178,7 @@ export default function Suppliers() {
         </span>
       ),
     },
-    {
-      title: "Trạng thái",
-      dataIndex: "isActive",
-      key: "is_active",
-      render: (isActive, record) => (
-        <Switch
-          checked={isActive}
-          onChange={(checked) => handleSwitchChange(checked, record)}
-          checkedChildren="Bật"
-          unCheckedChildren="Tắt"
-        />
-      ),
-    },
+
     {
       title: "Hành động",
       key: "action",
@@ -230,7 +213,11 @@ export default function Suppliers() {
         }}
       >
         <h2>Quản lý nhà cung cấp</h2>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => showModal()}>
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={() => showModal()}
+        >
           Thêm nhà cung cấp
         </Button>
       </div>
@@ -243,6 +230,7 @@ export default function Suppliers() {
         loading={loading}
       />
 
+      {/* 🔹 Modal thêm/sửa */}
       <Modal
         title={editingSupplier ? "Sửa nhà cung cấp" : "Thêm nhà cung cấp"}
         open={isModalVisible}
@@ -260,7 +248,13 @@ export default function Suppliers() {
           <Form.Item
             name="email"
             label="Email"
-            rules={[{ required: true, type: "email", message: "Vui lòng nhập email hợp lệ" }]}
+            rules={[
+              {
+                required: true,
+                type: "email",
+                message: "Vui lòng nhập email hợp lệ",
+              },
+            ]}
           >
             <Input />
           </Form.Item>
@@ -281,6 +275,7 @@ export default function Suppliers() {
         </Form>
       </Modal>
 
+      {/* 🔹 Modal xác nhận xóa */}
       <Modal
         title="Xác nhận xóa"
         open={isDeleteConfirmVisible}
@@ -289,8 +284,14 @@ export default function Suppliers() {
           setIsDeleteConfirmVisible(false);
           setDeleteRecord(null);
         }}
+        okText="Xóa"
+        cancelText="Hủy"
+        okButtonProps={{ danger: true }}
       >
-        <p>Bạn có chắc muốn xóa nhà cung cấp "{deleteRecord?.name}"?</p>
+        <p>
+          Bạn có chắc muốn xóa nhà cung cấp{" "}
+          <strong>{deleteRecord?.name}</strong> không?
+        </p>
       </Modal>
     </div>
   );

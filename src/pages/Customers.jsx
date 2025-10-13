@@ -1,7 +1,15 @@
 import React, { useEffect, useState } from "react";
-import { Table, Button, Space, Switch, Tag, Modal, Form, Input, message } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined, PhoneOutlined, MailOutlined, HomeOutlined } from "@ant-design/icons";
-import axiosInstance from "../service/axiosInstance";
+import { Table, Button, Space, Modal, Form, Input, message } from "antd";
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  PhoneOutlined,
+  MailOutlined,
+  HomeOutlined,
+  UserOutlined,
+} from "@ant-design/icons";
+import PartnerService from "../service/PartnerService";
 
 export default function Customers() {
   const [customers, setCustomers] = useState([]);
@@ -12,53 +20,35 @@ export default function Customers() {
   const [deleteRecord, setDeleteRecord] = useState(null);
   const [form] = Form.useForm();
 
-  useEffect(() => {
-    fetchCustomers();
-  }, []);
-
+  // 🔹 Lấy danh sách khách hàng
   const fetchCustomers = async () => {
     try {
       setLoading(true);
-      const apiResponse = await axiosInstance.get("/api/customers");
-      if (apiResponse.code === 1000 && Array.isArray(apiResponse.result)) {
-        const customersData = apiResponse.result.map(item => ({
+      const data = await PartnerService.getAll();
+      const customersData = data
+        .filter((item) => item.partnerType === "CUSTOMER")
+        .map((item) => ({
           id: item.id,
           name: item.name,
           email: item.email,
           phone: item.phone,
           address: item.address,
-          isActive: item.active || true // Giả định có trường active, nếu không có thì mặc định true
+          isActive: item.active,
         }));
-        setCustomers(customersData);
-      } else {
-        throw new Error("Dữ liệu không hợp lệ từ server");
-      }
+      setCustomers(customersData);
     } catch (error) {
-      console.error("Lỗi khi lấy khách hàng:", error);
+      console.error("Lỗi khi lấy danh sách khách hàng:", error);
+      message.error("Không thể tải danh sách khách hàng");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSwitchChange = async (checked, record) => {
-    try {
-      const apiResponse = await axiosInstance.put(`/api/customers/toggle/${record.id}`, {
-        active: checked
-      });
-      if (apiResponse.code === 1000) {
-        const updatedCustomers = customers.map((customer) =>
-          customer.id === record.id ? { ...customer, isActive: checked } : customer
-        );
-        setCustomers(updatedCustomers);
-        message.success(`Khách hàng ${record.name} đã được ${checked ? "bật" : "tắt"}`);
-      } else {
-        throw new Error("Cập nhật trạng thái thất bại");
-      }
-    } catch (error) {
-      console.error("Lỗi khi toggle trạng thái:", error);
-    }
-  };
+  useEffect(() => {
+    fetchCustomers();
+  }, []);
 
+  // 🔹 Hiển thị modal thêm/sửa
   const showModal = (customer = null) => {
     setEditingCustomer(customer);
     if (customer) {
@@ -66,7 +56,7 @@ export default function Customers() {
         name: customer.name,
         email: customer.email,
         phone: customer.phone,
-        address: customer.address
+        address: customer.address,
       });
     } else {
       form.resetFields();
@@ -74,75 +64,71 @@ export default function Customers() {
     setIsModalVisible(true);
   };
 
+  // 🔹 Submit form thêm/sửa
   const handleModalOk = async () => {
     try {
       const values = await form.validateFields();
-      let apiResponse;
+      const payload = {
+        name: values.name,
+        email: values.email,
+        phone: values.phone,
+        address: values.address,
+        partnerType: "CUSTOMER", // 👈 khác supplier ở đây
+      };
+
       if (editingCustomer) {
-        apiResponse = await axiosInstance.put(`/api/customers/${editingCustomer.id}`, {
-          name: values.name,
-          email: values.email,
-          phone: values.phone,
-          address: values.address,
-          active: editingCustomer.isActive
-        });
+        await PartnerService.update(editingCustomer.id, payload);
+        message.success("Cập nhật khách hàng thành công");
       } else {
-        apiResponse = await axiosInstance.post("/api/customers", {
-          name: values.name,
-          email: values.email,
-          phone: values.phone,
-          address: values.address,
-          active: true
-        });
+        await PartnerService.create(payload);
+        message.success("Thêm khách hàng thành công");
       }
-      if (apiResponse.code === 1000) {
-        setIsModalVisible(false);
-        fetchCustomers();
-        message.success(apiResponse.message || (editingCustomer ? "Cập nhật thành công" : "Thêm thành công"));
-      } else {
-        throw new Error("Thao tác thất bại");
-      }
+
+      setIsModalVisible(false);
+      fetchCustomers();
     } catch (error) {
       console.error("Lỗi khi thêm/sửa khách hàng:", error);
+      message.error("Thao tác thất bại");
     }
   };
 
+  // 🔹 Xóa khách hàng
   const showDeleteConfirm = (record) => {
     setDeleteRecord(record);
     setIsDeleteConfirmVisible(true);
-    console.log("Đang mở modal xóa cho:", record.name);
   };
 
   const handleDeleteConfirmOk = async () => {
-    if (deleteRecord) {
-      try {
-        const apiResponse = await axiosInstance.delete(`/api/customers/${deleteRecord.id}`);
-        if (apiResponse.code === 1000) {
-          setCustomers(customers.filter((customer) => customer.id !== deleteRecord.id));
-          message.success(apiResponse.message || "Xóa thành công");
-        } else {
-        throw new Error("Xóa thất bại");
+    try {
+      if (deleteRecord) {
+        await PartnerService.delete(deleteRecord.id);
+        message.success("Xóa khách hàng thành công");
+        setCustomers((prev) =>
+          prev.filter((customer) => customer.id !== deleteRecord.id)
+        );
       }
-      } catch (error) {
-        console.error("Lỗi khi xóa khách hàng:", error);
-        message.error("Không thể xóa khách hàng. Vui lòng thử lại!");
-      }
+    } catch (error) {
+      console.error("Lỗi khi xóa khách hàng:", error);
+      message.error("Không thể xóa khách hàng");
+    } finally {
+      setIsDeleteConfirmVisible(false);
+      setDeleteRecord(null);
     }
-    setIsDeleteConfirmVisible(false);
-    setDeleteRecord(null);
   };
 
+  // 🔹 Cấu hình cột bảng
   const columns = [
-    {
-      title: "Mã KH",
-      dataIndex: "id",
-      key: "id",
-      width: 100,
-    },
+    { title: "Mã KH", dataIndex: "id", key: "id", width: 100 },
     {
       title: "Tên khách hàng",
       dataIndex: "name",
       key: "name",
+      render: (name) => (
+        <span>
+          <UserOutlined style={{ marginRight: 6, color: "#1677ff" }} />
+          {name}
+        </span>
+      ),
     },
     {
       title: "Email",
@@ -150,7 +136,7 @@ export default function Customers() {
       key: "email",
       render: (email) => (
         <span>
-          <MailOutlined style={{ marginRight: 6, color: "#1677ff" }} />
+          <MailOutlined style={{ marginRight: 6, color: "#52c41a" }} />
           {email}
         </span>
       ),
@@ -161,7 +147,7 @@ export default function Customers() {
       key: "phone",
       render: (phone) => (
         <span>
-          <PhoneOutlined style={{ marginRight: 6, color: "#52c41a" }} />
+          <PhoneOutlined style={{ marginRight: 6, color: "#faad14" }} />
           {phone}
         </span>
       ),
@@ -172,7 +158,7 @@ export default function Customers() {
       key: "address",
       render: (address) => (
         <span>
-          <HomeOutlined style={{ marginRight: 6, color: "#faad14" }} />
+          <HomeOutlined style={{ marginRight: 6, color: "#a0d911" }} />
           {address}
         </span>
       ),
@@ -211,7 +197,11 @@ export default function Customers() {
         }}
       >
         <h2>Quản lý khách hàng</h2>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => showModal()}>
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={() => showModal()}
+        >
           Thêm khách hàng
         </Button>
       </div>
@@ -224,6 +214,7 @@ export default function Customers() {
         loading={loading}
       />
 
+      {/* 🔹 Modal thêm/sửa */}
       <Modal
         title={editingCustomer ? "Sửa khách hàng" : "Thêm khách hàng"}
         open={isModalVisible}
@@ -241,7 +232,13 @@ export default function Customers() {
           <Form.Item
             name="email"
             label="Email"
-            rules={[{ required: true, type: "email", message: "Vui lòng nhập email hợp lệ" }]}
+            rules={[
+              {
+                required: true,
+                type: "email",
+                message: "Vui lòng nhập email hợp lệ",
+              },
+            ]}
           >
             <Input />
           </Form.Item>
@@ -262,6 +259,7 @@ export default function Customers() {
         </Form>
       </Modal>
 
+      {/* 🔹 Modal xác nhận xóa */}
       <Modal
         title="Xác nhận xóa"
         open={isDeleteConfirmVisible}
@@ -270,8 +268,14 @@ export default function Customers() {
           setIsDeleteConfirmVisible(false);
           setDeleteRecord(null);
         }}
+        okText="Xóa"
+        cancelText="Hủy"
+        okButtonProps={{ danger: true }}
       >
-        <p>Bạn có chắc muốn xóa khách hàng "{deleteRecord?.name}"?</p>
+        <p>
+          Bạn có chắc muốn xóa khách hàng <strong>{deleteRecord?.name}</strong>{" "}
+          không?
+        </p>
       </Modal>
     </div>
   );

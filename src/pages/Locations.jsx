@@ -1,6 +1,21 @@
 import React, { useEffect, useState } from "react";
-import { Table, Button, Space, Tag, Modal, Form, Input, Select, message } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined, AppstoreOutlined } from "@ant-design/icons";
+import {
+  Table,
+  Button,
+  Space,
+  Tag,
+  Modal,
+  Form,
+  Input,
+  Select,
+  message,
+} from "antd";
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  AppstoreOutlined,
+} from "@ant-design/icons";
 import axiosInstance from "../service/axiosInstance";
 
 const { Option } = Select;
@@ -14,8 +29,22 @@ export default function Shelves() {
   const [deleteRecord, setDeleteRecord] = useState(null);
   const [form] = Form.useForm();
 
-  // Giá trị enum cho loại kệ
-  const shelfTypes = ["CABINET", "SHELF", "BIN"];
+  const locationTypeMap = {
+    KE_LON: "Kệ lớn",
+    KE_NHO: "Kệ nhỏ",
+    THUNG: "Thùng",
+    PALLET: "Pallet",
+    SAN: "Sàn",
+    KHU_LANH: "Phòng lạnh",
+  };
+  const typeColorMap = {
+    KE_LON: "volcano",
+    KE_NHO: "blue",
+    THUNG: "cyan",
+    PALLET: "green",
+    SAN: "purple",
+    KHU_LANH: "geekblue",
+  };
 
   useEffect(() => {
     fetchShelves();
@@ -26,17 +55,17 @@ export default function Shelves() {
       setLoading(true);
       const apiResponse = await axiosInstance.get("/api/locations");
       if (apiResponse.code === 1000 && Array.isArray(apiResponse.result)) {
-        const shelvesData = apiResponse.result.map(item => ({
+        const shelvesData = apiResponse.result.map((item) => ({
           id: item.id,
           name: item.name,
-          type: item.type
+          type: item.type,
         }));
         setShelves(shelvesData);
       } else {
         throw new Error("Dữ liệu không hợp lệ từ server");
       }
     } catch (error) {
-      console.error("Lỗi khi lấy kệ hàng:", error);
+      console.error("Lỗi khi lấy vị trí:", error);
     } finally {
       setLoading(false);
     }
@@ -47,7 +76,7 @@ export default function Shelves() {
     if (shelf) {
       form.setFieldsValue({
         name: shelf.name,
-        type: shelf.type
+        type: shelf.type,
       });
     } else {
       form.resetFields();
@@ -60,25 +89,31 @@ export default function Shelves() {
       const values = await form.validateFields();
       let apiResponse;
       if (editingShelf) {
-        apiResponse = await axiosInstance.put(`/api/locations/${editingShelf.id}`, {
-          name: values.name,
-          type: values.type
-        });
+        apiResponse = await axiosInstance.put(
+          `/api/locations/${editingShelf.id}`,
+          {
+            name: values.name,
+            type: values.type,
+          }
+        );
       } else {
         apiResponse = await axiosInstance.post("/api/locations", {
           name: values.name,
-          type: values.type
+          type: values.type,
         });
       }
       if (apiResponse.code === 1000) {
         setIsModalVisible(false);
         fetchShelves();
-        message.success(apiResponse.message || (editingShelf ? "Cập nhật thành công" : "Thêm thành công"));
+        message.success(
+          apiResponse.message ||
+            (editingShelf ? "Cập nhật thành công" : "Thêm thành công")
+        );
       } else {
         throw new Error("Thao tác thất bại");
       }
     } catch (error) {
-      console.error("Lỗi khi thêm/sửa kệ hàng:", error);
+      console.error("Lỗi khi thêm/sửa vị trí:", error);
     }
   };
 
@@ -91,7 +126,9 @@ export default function Shelves() {
   const handleDeleteConfirmOk = async () => {
     if (deleteRecord) {
       try {
-        const apiResponse = await axiosInstance.delete(`/api/locations/${deleteRecord.id}`);
+        const apiResponse = await axiosInstance.delete(
+          `/api/locations/${deleteRecord.id}`
+        );
         if (apiResponse.code === 1000) {
           setShelves(shelves.filter((shelf) => shelf.id !== deleteRecord.id));
           message.success(apiResponse.message || "Xóa thành công");
@@ -99,8 +136,8 @@ export default function Shelves() {
           throw new Error("Xóa thất bại");
         }
       } catch (error) {
-        console.error("Lỗi khi xóa kệ hàng:", error);
-        message.error("Không thể xóa kệ hàng. Vui lòng thử lại!");
+        console.error("Lỗi khi xóa vị trí:", error);
+        message.error("Không thể xóa vị trí. Vui lòng thử lại!");
       }
     }
     setIsDeleteConfirmVisible(false);
@@ -109,13 +146,13 @@ export default function Shelves() {
 
   const columns = [
     {
-      title: "Mã kệ",
+      title: "Mã vị trí",
       dataIndex: "id",
       key: "id",
       width: 100,
     },
     {
-      title: "Tên kệ",
+      title: "Tên vị trí",
       dataIndex: "name",
       key: "name",
       render: (name) => (
@@ -126,11 +163,13 @@ export default function Shelves() {
       ),
     },
     {
-      title: "Loại kệ",
+      title: "Loại vị trí",
       dataIndex: "type",
       key: "type",
       render: (type) => (
-        <Tag color={type === "BIN" ? "cyan" : type === "SHELF" ? "blue" : "green"}>{type}</Tag>
+        <Tag color={typeColorMap[type] || "default"}>
+          {locationTypeMap[type] || type}
+        </Tag>
       ),
     },
     {
@@ -166,9 +205,13 @@ export default function Shelves() {
           marginBottom: 16,
         }}
       >
-        <h2>Quản lý kệ hàng</h2>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => showModal()}>
-          Thêm kệ hàng
+        <h2>Quản lý vị trí</h2>
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={() => showModal()}
+        >
+          Thêm vị trí
         </Button>
       </div>
 
@@ -181,7 +224,7 @@ export default function Shelves() {
       />
 
       <Modal
-        title={editingShelf ? "Sửa kệ hàng" : "Thêm kệ hàng"}
+        title={editingShelf ? "Sửa vị trí" : "Thêm vị trí"}
         open={isModalVisible}
         onOk={handleModalOk}
         onCancel={() => setIsModalVisible(false)}
@@ -189,20 +232,20 @@ export default function Shelves() {
         <Form form={form} layout="vertical">
           <Form.Item
             name="name"
-            label="Tên kệ"
-            rules={[{ required: true, message: "Vui lòng nhập tên kệ" }]}
+            label="Tên vị trí"
+            rules={[{ required: true, message: "Vui lòng nhập tên vị trị" }]}
           >
             <Input />
           </Form.Item>
           <Form.Item
             name="type"
             label="Loại kệ"
-            rules={[{ required: true, message: "Vui lòng chọn loại kệ" }]}
+            rules={[{ required: true, message: "Vui lòng chọn loại vị trí" }]}
           >
-            <Select placeholder="Chọn loại kệ">
-              {shelfTypes.map((type) => (
-                <Option key={type} value={type}>
-                  {type}
+            <Select placeholder="Chọn loại vị trí">
+              {Object.entries(locationTypeMap).map(([value, label]) => (
+                <Option key={value} value={value}>
+                  {label}
                 </Option>
               ))}
             </Select>

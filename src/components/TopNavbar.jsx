@@ -78,11 +78,11 @@ export default function TopNavbar() {
           label: <NavLink to="/categories">Danh mục</NavLink>,
           icon: <TagsOutlined />,
         },
-        {
-          key: "unit-conversions",
-          label: <NavLink to="/unit-conversions">Quy đổi đơn vị</NavLink>,
-          icon: <RetweetOutlined />,
-        },
+        // {
+        //   key: "unit-conversions",
+        //   label: <NavLink to="/unit-conversions">Quy đổi đơn vị</NavLink>,
+        //   icon: <RetweetOutlined />,
+        // },
       ],
     },
     {
@@ -109,12 +109,12 @@ export default function TopNavbar() {
       children: [
         {
           key: "imports",
-          label: <NavLink to="/imports">Nhập kho</NavLink>,
+          label: <NavLink to="/receipts">Nhập kho</NavLink>,
           icon: <LoginOutlined />,
         },
         {
           key: "exports",
-          label: <NavLink to="/exports">Xuất kho</NavLink>,
+          label: <NavLink to="/issues">Xuất kho</NavLink>,
           icon: <LogoutOutlined />,
         },
         {
@@ -154,7 +154,6 @@ export default function TopNavbar() {
     />
   );
 
-
   return (
     <Header
       style={{
@@ -187,7 +186,7 @@ export default function TopNavbar() {
         style={{
           flex: 1,
           fontWeight: 500,
-          minWidth: 0
+          minWidth: 0,
         }}
         selectedKeys={[selectedKey]}
         items={mainMenuItems}

@@ -23,12 +23,19 @@ const decodeToken = () => {
   }
 };
 
-export const getRoleFromToken = () => {
+export const getRolesFromToken = () => {
   const decoded = decodeToken();
-  return decoded?.roles || decoded?.role || null;
+  return decoded?.roles || [];
 };
 
+// Lấy username (sub)
 export const getUsernameFromToken = () => {
   const decoded = decodeToken();
-  return decoded?.userId || decoded?.sub || null;
+  return decoded?.sub || null;
+};
+
+// Lấy userId
+export const getUserIdFromToken = () => {
+  const decoded = decodeToken();
+  return decoded?.userId || null;
 };
