@@ -1,32 +1,42 @@
 import React, { useEffect, useState } from "react";
-import { Table, Button, Space, Modal, Form, Input, message } from "antd";
+import {
+  Table,
+  Button,
+  Space,
+  Switch,
+  Tag,
+  Modal,
+  Form,
+  Input,
+  message,
+} from "antd";
 import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
-  PhoneOutlined,
-  MailOutlined,
-  HomeOutlined,
   UserOutlined,
+  MailOutlined,
+  PhoneOutlined,
+  HomeOutlined,
 } from "@ant-design/icons";
 import PartnerService from "../service/PartnerService";
 
-export default function Customers() {
-  const [customers, setCustomers] = useState([]);
+export default function Suppliers() {
+  const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [editingCustomer, setEditingCustomer] = useState(null);
+  const [editingSupplier, setEditingSupplier] = useState(null);
   const [isDeleteConfirmVisible, setIsDeleteConfirmVisible] = useState(false);
   const [deleteRecord, setDeleteRecord] = useState(null);
   const [form] = Form.useForm();
 
-  // 🔹 Lấy danh sách khách hàng
-  const fetchCustomers = async () => {
+  // 🔹 Lấy danh sách nhà cung cấp
+  const fetchSuppliers = async () => {
     try {
       setLoading(true);
       const data = await PartnerService.getAll();
-      const customersData = data
-        .filter((item) => item.partnerType === "CUSTOMER")
+      const suppliersData = data
+        .filter((item) => item.partnerType === "SUPPLIER")
         .map((item) => ({
           id: item.id,
           name: item.name,
@@ -35,28 +45,28 @@ export default function Customers() {
           address: item.address,
           isActive: item.active,
         }));
-      setCustomers(customersData);
+      setSuppliers(suppliersData);
     } catch (error) {
-      console.error("Lỗi khi lấy danh sách khách hàng:", error);
-      message.error("Không thể tải danh sách khách hàng");
+      console.error("Lỗi khi lấy danh sách nhà cung cấp:", error);
+      message.error("Không thể tải danh sách nhà cung cấp");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchCustomers();
+    fetchSuppliers();
   }, []);
 
   // 🔹 Hiển thị modal thêm/sửa
-  const showModal = (customer = null) => {
-    setEditingCustomer(customer);
-    if (customer) {
+  const showModal = (supplier = null) => {
+    setEditingSupplier(supplier);
+    if (supplier) {
       form.setFieldsValue({
-        name: customer.name,
-        email: customer.email,
-        phone: customer.phone,
-        address: customer.address,
+        name: supplier.name,
+        email: supplier.email,
+        phone: supplier.phone,
+        address: supplier.address,
       });
     } else {
       form.resetFields();
@@ -64,35 +74,35 @@ export default function Customers() {
     setIsModalVisible(true);
   };
 
-  // 🔹 Submit form thêm/sửa
+  // 🔹 Lưu khi submit modal
   const handleModalOk = async () => {
     try {
       const values = await form.validateFields();
       const payload = {
         name: values.name,
-        email: values.email,
-        phone: values.phone,
         address: values.address,
-        partnerType: "CUSTOMER", // 👈 khác supplier ở đây
+        phone: values.phone,
+        email: values.email,
+        partnerType: "SUPPLIER",
       };
 
-      if (editingCustomer) {
-        await PartnerService.update(editingCustomer.id, payload);
-        message.success("Cập nhật khách hàng thành công");
+      if (editingSupplier) {
+        await PartnerService.update(editingSupplier.id, payload);
+        message.success("Cập nhật nhà cung cấp thành công");
       } else {
         await PartnerService.create(payload);
-        message.success("Thêm khách hàng thành công");
+        message.success("Thêm nhà cung cấp thành công");
       }
 
       setIsModalVisible(false);
-      fetchCustomers();
+      fetchSuppliers();
     } catch (error) {
-      console.error("Lỗi khi thêm/sửa khách hàng:", error);
+      console.error("Lỗi khi thêm/sửa nhà cung cấp:", error);
       message.error("Thao tác thất bại");
     }
   };
 
-  // 🔹 Xóa khách hàng
+  // 🔹 Xóa nhà cung cấp
   const showDeleteConfirm = (record) => {
     setDeleteRecord(record);
     setIsDeleteConfirmVisible(true);
@@ -102,14 +112,14 @@ export default function Customers() {
     try {
       if (deleteRecord) {
         await PartnerService.delete(deleteRecord.id);
-        message.success("Xóa khách hàng thành công");
-        setCustomers((prev) =>
-          prev.filter((customer) => customer.id !== deleteRecord.id)
+        message.success("Xóa nhà cung cấp thành công");
+        setSuppliers((prev) =>
+          prev.filter((supplier) => supplier.id !== deleteRecord.id)
         );
       }
     } catch (error) {
-      console.error("Lỗi khi xóa khách hàng:", error);
-      message.error("Không thể xóa khách hàng");
+      console.error("Lỗi khi xóa nhà cung cấp:", error);
+      message.error("Không thể xóa nhà cung cấp");
     } finally {
       setIsDeleteConfirmVisible(false);
       setDeleteRecord(null);
@@ -118,9 +128,14 @@ export default function Customers() {
 
   // 🔹 Cấu hình cột bảng
   const columns = [
-    { title: "Mã KH", dataIndex: "id", key: "id", width: 100 },
     {
-      title: "Tên khách hàng",
+      title: "Mã NCC",
+      dataIndex: "id",
+      key: "id",
+      width: 100,
+    },
+    {
+      title: "Tên nhà cung cấp",
       dataIndex: "name",
       key: "name",
       render: (name) => (
@@ -163,6 +178,7 @@ export default function Customers() {
         </span>
       ),
     },
+
     {
       title: "Hành động",
       key: "action",
@@ -196,19 +212,19 @@ export default function Customers() {
           marginBottom: 16,
         }}
       >
-        <h2>Quản lý khách hàng</h2>
+        <h2>Quản lý nhà cung cấp</h2>
         <Button
           type="primary"
           icon={<PlusOutlined />}
           onClick={() => showModal()}
         >
-          Thêm khách hàng
+          Thêm nhà cung cấp
         </Button>
       </div>
 
       <Table
         rowKey="id"
-        dataSource={customers}
+        dataSource={suppliers}
         columns={columns}
         pagination={{ pageSize: 5 }}
         loading={loading}
@@ -216,7 +232,7 @@ export default function Customers() {
 
       {/* 🔹 Modal thêm/sửa */}
       <Modal
-        title={editingCustomer ? "Sửa khách hàng" : "Thêm khách hàng"}
+        title={editingSupplier ? "Sửa nhà cung cấp" : "Thêm nhà cung cấp"}
         open={isModalVisible}
         onOk={handleModalOk}
         onCancel={() => setIsModalVisible(false)}
@@ -224,7 +240,7 @@ export default function Customers() {
         <Form form={form} layout="vertical">
           <Form.Item
             name="name"
-            label="Tên khách hàng"
+            label="Tên nhà cung cấp"
             rules={[{ required: true, message: "Vui lòng nhập tên" }]}
           >
             <Input />
@@ -273,8 +289,8 @@ export default function Customers() {
         okButtonProps={{ danger: true }}
       >
         <p>
-          Bạn có chắc muốn xóa khách hàng <strong>{deleteRecord?.name}</strong>{" "}
-          không?
+          Bạn có chắc muốn xóa nhà cung cấp{" "}
+          <strong>{deleteRecord?.name}</strong> không?
         </p>
       </Modal>
     </div>
