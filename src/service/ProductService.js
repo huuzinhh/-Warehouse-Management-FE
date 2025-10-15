@@ -62,6 +62,18 @@ const ProductService = {
     }
   },
 
+  toggle: async (id) => {
+    try {
+      const response = await axiosInstance.put(
+        API_ENDPOINTS.product.toggle(id)
+      );
+      return response.result;
+    } catch (error) {
+      console.error("Toggle Product error:", error);
+      throw error;
+    }
+  },
+
   getInventory: async () => {
     try {
       const response = await axiosInstance.get(
@@ -70,6 +82,18 @@ const ProductService = {
       return response.result;
     } catch (error) {
       console.error("Get inventory error:", error);
+      throw error;
+    }
+  },
+
+  getInventoryByProductId: async (productId) => {
+    try {
+      const response = await axiosInstance.get(
+        API_ENDPOINTS.product.getInventoryByProductId(productId)
+      );
+      return response.result;
+    } catch (error) {
+      console.error("Get inventory by product ID error:", error);
       throw error;
     }
   },

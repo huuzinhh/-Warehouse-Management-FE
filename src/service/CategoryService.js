@@ -61,6 +61,18 @@ const CategoryService = {
       throw error;
     }
   },
+
+  toggleActive: async (id) => {
+    try {
+      const response = await axiosInstance.put(
+        API_ENDPOINTS.category.toggle(id)
+      );
+      return response.result;
+    } catch (error) {
+      console.error("Toggle category active status error:", error);
+      throw error;
+    }
+  },
 };
 
 export default CategoryService;

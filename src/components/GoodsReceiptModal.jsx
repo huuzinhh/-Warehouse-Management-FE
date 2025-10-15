@@ -48,7 +48,8 @@ export default function GoodsReceiptModal({ open, onCancel, onOk, loading }) {
   const fetchProducts = async () => {
     try {
       const productData = await ProductService.getAll();
-      setProducts(productData || []);
+      const data = productData.filter((item) => item.active);
+      setProducts(data || []);
     } catch (error) {
       console.error("Fetch products error:", error);
       message.error("Không thể tải danh sách sản phẩm");
@@ -142,12 +143,10 @@ export default function GoodsReceiptModal({ open, onCancel, onOk, loading }) {
 
     setProductList([...productList, newProduct]);
     setSearchTerm("");
-    message.success(`Đã thêm "${selectedProduct.name}" vào danh sách`);
   };
 
   const handleQuantityChange = (key, value) => {
     if (value <= 0) {
-      message.warning("Số lượng phải lớn hơn 0");
       return;
     }
     setProductList((prev) =>
@@ -159,7 +158,6 @@ export default function GoodsReceiptModal({ open, onCancel, onOk, loading }) {
 
   const handleUnitPriceChange = (key, value) => {
     if (value < 0) {
-      message.warning("Đơn giá không được âm");
       return;
     }
     setProductList((prev) =>
@@ -220,9 +218,6 @@ export default function GoodsReceiptModal({ open, onCancel, onOk, loading }) {
     };
 
     setProductList((prev) => [...prev, productToAdd]);
-    message.success(
-      `Đã thêm sản phẩm mới "${newProduct.name}" vào danh sách nhập`
-    );
   };
 
   // Columns hiển thị sản phẩm trong phiếu nhập - không cố định width để tự động co giãn
@@ -346,18 +341,15 @@ export default function GoodsReceiptModal({ open, onCancel, onOk, loading }) {
       const values = await form.validateFields();
 
       if (productList.length === 0) {
-        message.warning("Vui lòng thêm ít nhất 1 sản phẩm vào phiếu nhập");
         return;
       }
 
       const productsWithoutPrice = productList.filter((p) => p.unitPrice <= 0);
       if (productsWithoutPrice.length > 0) {
-        message.warning("Vui lòng nhập đơn giá cho tất cả sản phẩm");
         return;
       }
 
       if (!values.partnerId) {
-        message.warning("Vui lòng chọn nhà cung cấp");
         return;
       }
 
@@ -365,7 +357,6 @@ export default function GoodsReceiptModal({ open, onCancel, onOk, loading }) {
         (p) => !p.selectedLocationId
       );
       if (productsWithoutLocation.length > 0) {
-        message.warning("Vui lòng chọn vị trí cho tất cả sản phẩm");
         return;
       }
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Table, Button, Space, Tag, Modal } from "antd";
+import { Table, Button, Space, Tag, Modal, Switch } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import ProductService from "../service/ProductService";
 import ProductModal from "../components/ProductModal";
@@ -75,6 +75,20 @@ export default function Products() {
     }
   };
 
+  const handleToggleActive = async (checked, record) => {
+    try {
+      // Gọi API để cập nhật trạng thái
+      await ProductService.toggle(record.id);
+
+      // Cập nhật state local
+      setProducts((prev) =>
+        prev.map((p) => (p.id === record.id ? { ...p, active: checked } : p))
+      );
+    } catch (error) {
+      console.error("Toggle active failed:", error);
+    }
+  };
+
   const columns = [
     { title: "Mã SKU", dataIndex: "sku", width: 100 },
     { title: "Tên sản phẩm", dataIndex: "name" },
@@ -94,13 +108,15 @@ export default function Products() {
     {
       title: "Trạng thái",
       dataIndex: "active",
-      width: 100,
-      render: (active) =>
-        active ? (
-          <Tag color="green">Active</Tag>
-        ) : (
-          <Tag color="red">Unactive</Tag>
-        ),
+      width: 120,
+      render: (active, record) => (
+        <Switch
+          checked={active}
+          onChange={(checked) => handleToggleActive(checked, record)}
+          checkedChildren="Bật"
+          unCheckedChildren="Tắt"
+        />
+      ),
     },
     {
       title: "Hành động",

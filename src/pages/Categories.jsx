@@ -1,122 +1,83 @@
-import React, { useEffect, useState } from "react";
-import { Table, Button, Space, Switch, Tag, Modal, Form, Input, message } from "antd";
+// pages/Categories.js
+import React, { useEffect, useState, useCallback } from "react";
+import { Table, Button, Space, Switch, Tag, Modal, message } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
-import axiosInstance from "../service/axiosInstance";
+import CategoryService from "../service/CategoryService";
+import CategoryModal from "../components/CategoryModal";
 
 export default function Categories() {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
-  const [form] = Form.useForm();
-  const [isDeleteConfirmVisible, setIsDeleteConfirmVisible] = useState(false); // State cho modal xóa
-  const [deleteRecord, setDeleteRecord] = useState(null); // Lưu record cần xóa
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteRecord, setDeleteRecord] = useState(null);
+  const [modalLoading, setModalLoading] = useState(false);
 
-  useEffect(() => {
-    fetchCategories();
-  }, []);
-
-  const fetchCategories = async () => {
+  // Fetch categories với useCallback
+  const fetchCategories = useCallback(async () => {
     try {
       setLoading(true);
-      const apiResponse = await axiosInstance.get("/api/categories");
-      if (apiResponse.code === 1000 && Array.isArray(apiResponse.result)) {
-        const categoriesData = apiResponse.result.map(item => ({
-          id: item.id,
-          name: item.name,
-          isActive: item.active
-        }));
-        setCategories(categoriesData);
-      } else {
-        throw new Error("Dữ liệu không hợp lệ từ server");
-      }
+      const data = await CategoryService.getAll();
+      setCategories(data);
     } catch (error) {
       console.error("Lỗi khi lấy danh mục:", error);
+      message.error("Không thể tải danh mục");
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
+
+  // Xử lý toggle trạng thái
   const handleSwitchChange = async (checked, record) => {
     try {
-      const apiResponse = await axiosInstance.put(`/api/categories/toggle/${record.id}`, {
-        active: checked
-      });
-      if (apiResponse.code === 1000) {
-        const updatedCategories = categories.map((category) =>
-          category.id === record.id ? { ...category, isActive: checked } : category
-        );
-        setCategories(updatedCategories);
-        message.success(`Danh mục ${record.name} đã được ${checked ? "bật" : "tắt"}`);
-      } else {
-        throw new Error("Cập nhật trạng thái thất bại");
-      }
+      await CategoryService.toggleActive(record.id);
+      setCategories((prev) =>
+        prev.map((c) => (c.id === record.id ? { ...c, active: checked } : c))
+      );
+      message.success(
+        `Danh mục "${record.name}" đã được ${checked ? "bật" : "tắt"}`
+      );
     } catch (error) {
       console.error("Lỗi khi toggle trạng thái:", error);
+      message.error("Cập nhật trạng thái thất bại");
     }
   };
 
-  const showModal = (category = null) => {
+  // Mở modal thêm/sửa
+  const openModal = (category = null) => {
     setEditingCategory(category);
-    if (category) {
-      form.setFieldsValue({ name: category.name });
-    } else {
-      form.resetFields();
-    }
-    setIsModalVisible(true);
+    setModalOpen(true);
   };
 
-  const handleModalOk = async () => {
-    try {
-      const values = await form.validateFields();
-      let apiResponse;
-      if (editingCategory) {
-        apiResponse = await axiosInstance.put(`/api/categories/${editingCategory.id}`, {
-          name: values.name,
-          active: editingCategory.isActive
-        });
-      } else {
-        apiResponse = await axiosInstance.post("/api/categories", {
-          name: values.name,
-          active: true
-        });
-      }
-      if (apiResponse.code === 1000) {
-        setIsModalVisible(false);
-        fetchCategories();
-        message.success(apiResponse.message || (editingCategory ? "Cập nhật thành công" : "Thêm thành công"));
-      } else {
-        throw new Error("Thao tác thất bại");
-      }
-    } catch (error) {
-      console.error("Lỗi khi thêm/sửa danh mục:", error);
-    }
+  // Xử lý khi modal thêm/sửa thành công
+  const handleModalSuccess = () => {
+    fetchCategories();
   };
 
-  // Hiển thị modal xóa
+  // Hiển thị modal xác nhận xóa
   const showDeleteConfirm = (record) => {
     setDeleteRecord(record);
-    setIsDeleteConfirmVisible(true);
-    console.log("Hiển thị modal xóa cho:", record.name);
+    setDeleteConfirmOpen(true);
   };
 
-  // Xử lý xóa khi OK
+  // Xử lý xóa danh mục
   const handleDeleteConfirmOk = async () => {
     if (deleteRecord) {
       try {
-        const apiResponse = await axiosInstance.delete(`/api/categories/${deleteRecord.id}`);
-        if (apiResponse.code === 1000) {
-          setCategories(categories.filter((category) => category.id !== deleteRecord.id));
-          message.success(apiResponse.message || "Xóa thành công");
-        } else {
-          throw new Error("Xóa thất bại");
-        }
+        await CategoryService.delete(deleteRecord.id);
+        setCategories((prev) => prev.filter((c) => c.id !== deleteRecord.id));
+        message.success("Xóa danh mục thành công");
       } catch (error) {
         console.error("Lỗi khi xóa danh mục:", error);
-        message.error("Không thể xóa danh mục. Vui lòng thử lại!");
+        message.error("Không thể xóa danh mục");
       }
     }
-    setIsDeleteConfirmVisible(false);
+    setDeleteConfirmOpen(false);
     setDeleteRecord(null);
   };
 
@@ -134,10 +95,10 @@ export default function Categories() {
     },
     {
       title: "Trạng thái hiển thị",
-      dataIndex: "isActive",
+      dataIndex: "active",
       key: "display_status",
-      render: (isActive) =>
-        isActive ? (
+      render: (active) =>
+        active ? (
           <Tag color="green">Đang hoạt động</Tag>
         ) : (
           <Tag color="red">Ngừng hoạt động</Tag>
@@ -145,11 +106,11 @@ export default function Categories() {
     },
     {
       title: "Trạng thái",
-      dataIndex: "isActive",
+      dataIndex: "active",
       key: "is_active",
-      render: (isActive, record) => (
+      render: (active, record) => (
         <Switch
-          checked={isActive}
+          checked={active}
           onChange={(checked) => handleSwitchChange(checked, record)}
           checkedChildren="Bật"
           unCheckedChildren="Tắt"
@@ -164,7 +125,7 @@ export default function Categories() {
           <Button
             type="primary"
             icon={<EditOutlined />}
-            onClick={() => showModal(record)}
+            onClick={() => openModal(record)}
           >
             Sửa
           </Button>
@@ -190,7 +151,11 @@ export default function Categories() {
         }}
       >
         <h2>Quản lý danh mục</h2>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => showModal()}>
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={() => openModal()}
+        >
           Thêm danh mục
         </Button>
       </div>
@@ -203,34 +168,32 @@ export default function Categories() {
         loading={loading}
       />
 
-      <Modal
-        title={editingCategory ? "Sửa danh mục" : "Thêm danh mục"}
-        open={isModalVisible}
-        onOk={handleModalOk}
-        onCancel={() => setIsModalVisible(false)}
-      >
-        <Form form={form} layout="vertical">
-          <Form.Item
-            name="name"
-            label="Tên danh mục"
-            rules={[{ required: true, message: "Vui lòng nhập tên danh mục" }]}
-          >
-            <Input />
-          </Form.Item>
-        </Form>
-      </Modal>
+      {/* Modal thêm/sửa tách riêng */}
+      <CategoryModal
+        open={modalOpen}
+        onCancel={() => setModalOpen(false)}
+        onSuccess={handleModalSuccess}
+        editingCategory={editingCategory}
+        loading={modalLoading}
+      />
 
       {/* Modal xác nhận xóa */}
       <Modal
         title="Xác nhận xóa"
-        open={isDeleteConfirmVisible}
+        open={deleteConfirmOpen}
         onOk={handleDeleteConfirmOk}
         onCancel={() => {
-          setIsDeleteConfirmVisible(false);
+          setDeleteConfirmOpen(false);
           setDeleteRecord(null);
         }}
+        okText="Xóa"
+        cancelText="Hủy"
+        okButtonProps={{ danger: true }}
       >
         <p>Bạn có chắc muốn xóa danh mục "{deleteRecord?.name}"?</p>
+        <p style={{ color: "#ff4d4f", fontStyle: "italic" }}>
+          Hành động này không thể hoàn tác.
+        </p>
       </Modal>
     </div>
   );
