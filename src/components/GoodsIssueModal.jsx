@@ -25,6 +25,7 @@ import ProductService from "../service/ProductService";
 import PartnerService from "../service/PartnerService";
 import SelectBatchModal from "./SelectBatchModal";
 import { getUserIdFromToken } from "../service/localStorageService";
+import ToastService from "../service/ToastService";
 
 const { Option } = Select;
 
@@ -50,7 +51,6 @@ export default function GoodsIssueModal({ open, onCancel, onOk, loading }) {
       const data = productData.filter((item) => item.active);
       setProducts(data || []);
     } catch (error) {
-      console.error("Fetch products error:", error);
       message.error("Không thể tải danh sách sản phẩm");
     }
   };
@@ -63,7 +63,6 @@ export default function GoodsIssueModal({ open, onCancel, onOk, loading }) {
       );
       setCustomers(customers || []);
     } catch (error) {
-      console.error("Fetch customers error:", error);
       message.error("Không thể tải danh sách khách hàng");
     }
   };
@@ -74,24 +73,37 @@ export default function GoodsIssueModal({ open, onCancel, onOk, loading }) {
       product.sku?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // ✅ Khi chọn thêm 1 lô hàng
-  const handleAddBatch = (batch) => {
-    // Kiểm tra xem lô hàng đã được chọn chưa
-    const existingBatch = selectedBatches.find((b) => b.id === batch.id);
-    if (existingBatch) {
-      message.warning("Lô hàng này đã được chọn!");
+  const handleAddBatch = (newBatch) => {
+    // Lấy danh sách các batch cùng product + batchCode đã chọn trước đó
+    const sameBatches = selectedBatches.filter(
+      (b) =>
+        b.productId === newBatch.productId && b.batchCode === newBatch.batchCode
+    );
+
+    // Tính tổng quy đổi về đơn vị gốc
+    const totalBaseQty =
+      sameBatches.reduce((sum, b) => sum + b.quantity * b.ratioToBase, 0) +
+      newBatch.quantity * newBatch.ratioToBase;
+
+    // Kiểm tra vượt tồn kho
+    if (totalBaseQty > newBatch.remainingQuantity + 1e-6) {
+      message.error(
+        `Lô ${newBatch.batchCode}: tổng SL xuất (${totalBaseQty}) vượt tồn kho (${newBatch.remainingQuantity})`
+      );
+      ToastService.error(
+        `Lô ${newBatch.batchCode}: tổng SL xuất (${totalBaseQty}) vượt tồn kho (${newBatch.remainingQuantity})`
+      );
       return;
     }
 
-    setSelectedBatches((prev) => [...prev, batch]);
+    // Nếu không vượt thì thêm bình thường
+    setSelectedBatches((prev) => [...prev, newBatch]);
     setSearchTerm("");
     setSelectedProduct(null);
   };
 
-  // ✅ Thay đổi số lượng
   const handleQuantityChange = (batchId, newQuantity) => {
     if (newQuantity <= 0) return;
-
     setSelectedBatches((prev) =>
       prev.map((batch) =>
         batch.id === batchId ? { ...batch, quantity: newQuantity } : batch
@@ -99,50 +111,33 @@ export default function GoodsIssueModal({ open, onCancel, onOk, loading }) {
     );
   };
 
-  // ✅ Xóa lô hàng
   const handleRemoveBatch = (batchId) => {
     setSelectedBatches((prev) => prev.filter((batch) => batch.id !== batchId));
   };
 
-  // ✅ Tính tổng số lượng base unit
-  const calculateTotalBaseQuantity = () => {
-    return selectedBatches.reduce((total, batch) => {
-      const baseQuantity = batch.quantity * (batch.ratioToBase || 1);
-      return total + baseQuantity;
-    }, 0);
-  };
+  const calculateTotalAmount = () =>
+    selectedBatches.reduce(
+      (sum, b) =>
+        sum + (b.unitPrice || 0) * (b.quantity || 0) * (b.ratioToBase || 1),
+      0
+    );
 
-  // Columns hiển thị lô hàng trong phiếu xuất
   const batchColumns = [
+    { title: "Sản phẩm", dataIndex: "productName", key: "productName" },
+    { title: "Mã lô", dataIndex: "batchCode", key: "batchCode" },
+    { title: "Vị trí", dataIndex: "locationName", key: "locationName" },
+    { title: "Đơn vị", dataIndex: "unitName", key: "unitName" },
     {
-      title: "Sản phẩm",
-      dataIndex: "productName",
-      key: "productName",
-      width: 150,
-    },
-    {
-      title: "Mã lô",
-      dataIndex: "batchCode",
-      key: "batchCode",
-      width: 120,
-    },
-    {
-      title: "Vị trí",
-      dataIndex: "locationName",
-      key: "locationName",
-      width: 120,
-    },
-    {
-      title: "Đơn vị",
-      dataIndex: "unitName",
-      key: "unitName",
-      width: 100,
+      title: "Giá xuất (VNĐ)",
+      dataIndex: "unitPrice",
+      key: "unitPrice",
+      render: (price) =>
+        price?.toLocaleString("vi-VN", { style: "currency", currency: "VND" }),
     },
     {
       title: "SL xuất",
       dataIndex: "quantity",
       key: "quantity",
-      width: 120,
       render: (quantity, record) => (
         <InputNumber
           value={quantity}
@@ -152,25 +147,30 @@ export default function GoodsIssueModal({ open, onCancel, onOk, loading }) {
           style={{ width: "100%" }}
           step={0.01}
           precision={2}
-          size="middle"
         />
       ),
     },
     {
-      title: "SL còn (Base)",
-      dataIndex: "remainingQuantity",
-      key: "remainingQuantity",
-      width: 120,
-      render: (qty) => (
-        <span style={{ color: qty > 0 ? "#389e0d" : "#cf1322" }}>
-          {typeof qty === "number" ? qty.toLocaleString() : "0"}
-        </span>
-      ),
+      title: "Thành tiền (VNĐ)",
+      key: "amount",
+      render: (_, record) => {
+        const amount =
+          (record.unitPrice || 0) *
+          (record.quantity || 0) *
+          (record.ratioToBase || 1);
+        return (
+          <strong>
+            {amount.toLocaleString("vi-VN", {
+              style: "currency",
+              currency: "VND",
+            })}
+          </strong>
+        );
+      },
     },
     {
       title: "Thao tác",
       key: "actions",
-      width: 100,
       render: (_, record) => (
         <Button
           danger
@@ -184,26 +184,26 @@ export default function GoodsIssueModal({ open, onCancel, onOk, loading }) {
     },
   ];
 
-  // ✅ Submit form
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
-
       if (selectedBatches.length === 0) {
         message.error("Vui lòng chọn ít nhất 1 lô hàng để xuất!");
+        ToastService.error("Vui lòng chọn ít nhất 1 lô hàng để xuất!");
         return;
       }
 
-      // Kiểm tra số lượng hợp lệ
       const invalidBatch = selectedBatches.find(
         (batch) =>
           !batch.quantity ||
           batch.quantity <= 0 ||
           batch.quantity > batch.maxQuantity
       );
-
       if (invalidBatch) {
         message.error(
+          `Số lượng xuất của lô ${invalidBatch.batchCode} không hợp lệ!`
+        );
+        ToastService.error(
           `Số lượng xuất của lô ${invalidBatch.batchCode} không hợp lệ!`
         );
         return;
@@ -211,9 +211,18 @@ export default function GoodsIssueModal({ open, onCancel, onOk, loading }) {
 
       const createdById = getUserIdFromToken();
 
-      // ✅ Tạo payload đúng format backend yêu cầu
+      // ✅ Sinh mã tự động nếu không nhập
+      const generateIssueCode = () => {
+        const now = new Date();
+        const yyyymmdd = now.toISOString().slice(0, 10).replace(/-/g, "");
+        const randomNum = Math.floor(Math.random() * 900 + 100); // ngẫu nhiên 3 chữ số
+        return `PX${yyyymmdd}${randomNum}`;
+      };
+
+      const issueCode = values.issueCode?.trim() || generateIssueCode();
+
       const payload = {
-        issueCode: values.issueCode || null,
+        issueCode,
         issueDate:
           values.issueDate?.format("YYYY-MM-DDTHH:mm:ss") ||
           new Date().toISOString(),
@@ -229,9 +238,6 @@ export default function GoodsIssueModal({ open, onCancel, onOk, loading }) {
         })),
       };
 
-      console.log("Payload gửi đi:", payload);
-
-      // ✅ Gọi callback để tạo phiếu xuất
       onOk(payload, form, () => {
         setSelectedBatches([]);
         setSearchTerm("");
@@ -265,44 +271,25 @@ export default function GoodsIssueModal({ open, onCancel, onOk, loading }) {
         okText="Lưu phiếu xuất"
         cancelText="Hủy"
         width="97vw"
-        style={{
-          maxWidth: "1800px",
-          top: 20,
-        }}
-        bodyStyle={{
-          maxHeight: "85vh",
-          overflow: "auto",
-        }}
+        style={{ maxWidth: "1800px", top: 20 }}
+        styles={{ body: { maxHeight: "85vh", overflow: "auto" } }}
       >
         <Row gutter={24}>
-          {/* CỘT 1: Thông tin cơ bản */}
+          {/* CỘT 1 */}
           <Col span={5}>
-            <Card title="Thông tin phiếu xuất" bordered={false} size="middle">
+            <Card title="Thông tin phiếu xuất" bordered={false}>
               <Form form={form} layout="vertical">
-                <Form.Item
-                  label="Mã phiếu xuất"
-                  name="issueCode"
-                  rules={[
-                    { required: false, message: "Vui lòng nhập mã phiếu" },
-                  ]}
-                >
-                  <Input
-                    placeholder="Để trống để tự động tạo mã"
-                    size="middle"
-                  />
+                <Form.Item label="Mã phiếu xuất" name="issueCode">
+                  <Input placeholder="Để trống để tự tạo" />
                 </Form.Item>
-
                 <Form.Item
                   label="Khách hàng"
                   name="customerId"
-                  rules={[
-                    { required: true, message: "Vui lòng chọn khách hàng" },
-                  ]}
+                  rules={[{ required: true, message: "Chọn khách hàng" }]}
                 >
                   <Select
-                    placeholder="Chọn khách hàng"
                     showSearch
-                    size="middle"
+                    placeholder="Chọn khách hàng"
                     filterOption={(input, option) =>
                       option.children
                         .toLowerCase()
@@ -316,123 +303,77 @@ export default function GoodsIssueModal({ open, onCancel, onOk, loading }) {
                     ))}
                   </Select>
                 </Form.Item>
-
                 <Form.Item
                   label="Ngày xuất"
                   name="issueDate"
+                  initialValue={dayjs()} // ✅ thay defaultValue bằng initialValue
                   rules={[{ required: true, message: "Chọn ngày xuất" }]}
                 >
                   <DatePicker
                     showTime
                     format="DD/MM/YYYY HH:mm"
                     style={{ width: "100%" }}
-                    size="middle"
-                    defaultValue={dayjs()}
                   />
                 </Form.Item>
 
-                {/* Thống kê */}
-                <div style={{ marginBottom: 16 }}>
-                  <Statistic
-                    title="Tổng số lượng (Base Unit)"
-                    value={calculateTotalBaseQuantity()}
-                    precision={2}
-                    valueStyle={{ fontSize: "16px" }}
-                  />
-                </div>
-
-                <div style={{ marginBottom: 16 }}>
-                  <Statistic
-                    title="Số lô hàng"
-                    value={selectedBatches.length}
-                    valueStyle={{ fontSize: "16px" }}
-                  />
-                </div>
-
-                {selectedBatches.length > 0 && (
-                  <div
-                    style={{
-                      padding: "12px",
-                      backgroundColor: "#f0f8ff",
-                      borderRadius: "6px",
-                      border: "1px solid #d6e4ff",
-                    }}
-                  >
-                    <div style={{ fontSize: "12px", color: "#666" }}>
-                      <strong>Thông tin:</strong>
-                    </div>
-                    <div style={{ fontSize: "12px", color: "#666" }}>
-                      • {selectedBatches.length} lô hàng
-                    </div>
-                    <div style={{ fontSize: "12px", color: "#666" }}>
-                      • {calculateTotalBaseQuantity().toFixed(2)} tổng SL
-                    </div>
-                  </div>
-                )}
+                <Statistic
+                  title="Tổng tiền (VNĐ)"
+                  value={calculateTotalAmount()}
+                  precision={0}
+                  valueStyle={{ color: "#cf1322" }}
+                  formatter={(v) =>
+                    parseFloat(v).toLocaleString("vi-VN", {
+                      style: "currency",
+                      currency: "VND",
+                    })
+                  }
+                />
               </Form>
             </Card>
           </Col>
 
-          {/* CỘT 2: Danh sách lô hàng xuất */}
+          {/* CỘT 2 */}
           <Col span={19}>
             <Card
               title="Danh sách lô hàng xuất kho"
-              bordered={false}
               extra={
                 <Button
                   type="primary"
                   icon={<PlusOutlined />}
+                  disabled={!selectedProduct}
                   onClick={() => {
                     if (!selectedProduct) {
                       message.warning("Vui lòng chọn sản phẩm trước!");
+                      ToastService.warning("Vui lòng chọn sản phẩm trước!");
                       return;
                     }
                     setBatchModalOpen(true);
                   }}
-                  size="middle"
-                  disabled={!selectedProduct}
                 >
                   Thêm lô hàng
                 </Button>
               }
             >
-              <div style={{ marginBottom: 16 }}>
-                <AutoComplete
-                  value={searchTerm}
-                  onChange={setSearchTerm}
-                  onSelect={handleSelectProduct}
-                  options={filteredProducts.map((product) => ({
-                    value: product.name,
-                    label: (
-                      <div>
-                        <div>
-                          <strong>{product.sku}</strong> - {product.name}
-                        </div>
-                        <div style={{ fontSize: "12px", color: "#666" }}>
-                          Đơn vị: {product.baseUnit} | Quy đổi:{" "}
-                          {product.conversions
-                            ?.filter((c) => c.ratioToBase !== 1)
-                            .map((c) => c.unitName)
-                            .join(", ")}
-                        </div>
-                      </div>
-                    ),
-                    product: product,
-                  }))}
-                  style={{ width: "100%" }}
-                >
-                  <Input
-                    prefix={<SearchOutlined />}
-                    placeholder="Tìm kiếm sản phẩm để chọn lô hàng..."
-                    size="middle"
-                  />
-                </AutoComplete>
-                <div
-                  style={{ fontSize: "12px", color: "#666", marginTop: "4px" }}
-                >
-                  Gõ tên hoặc SKU sản phẩm, click chọn để mở modal chọn lô hàng
-                </div>
-              </div>
+              <AutoComplete
+                value={searchTerm}
+                onChange={setSearchTerm}
+                onSelect={handleSelectProduct}
+                options={filteredProducts.map((product) => ({
+                  value: product.name,
+                  label: (
+                    <div>
+                      <strong>{product.sku}</strong> - {product.name}
+                    </div>
+                  ),
+                  product,
+                }))}
+                style={{ width: "100%", marginBottom: 16 }}
+              >
+                <Input
+                  prefix={<SearchOutlined />}
+                  placeholder="Tìm kiếm sản phẩm để chọn lô hàng..."
+                />
+              </AutoComplete>
 
               <Table
                 dataSource={selectedBatches}
@@ -440,35 +381,23 @@ export default function GoodsIssueModal({ open, onCancel, onOk, loading }) {
                 rowKey="id"
                 pagination={false}
                 scroll={{ y: 400 }}
-                size="middle"
-                locale={{
-                  emptyText:
-                    "Chưa có lô hàng nào. Tìm kiếm sản phẩm và chọn lô hàng để xuất kho.",
-                }}
-                summary={() => (
-                  <Table.Summary>
-                    <Table.Summary.Row>
-                      <Table.Summary.Cell index={0} colSpan={4}>
-                        <strong>Tổng cộng</strong>
-                      </Table.Summary.Cell>
-                      <Table.Summary.Cell index={1}>
-                        <strong>
-                          {calculateTotalBaseQuantity().toFixed(2)}
-                        </strong>
-                      </Table.Summary.Cell>
-                      <Table.Summary.Cell index={2} colSpan={2}>
-                        <strong>{selectedBatches.length} lô hàng</strong>
-                      </Table.Summary.Cell>
-                    </Table.Summary.Row>
-                  </Table.Summary>
-                )}
               />
+
+              {/* Tổng tiền dưới bảng */}
+              <div style={{ textAlign: "right", marginTop: 16 }}>
+                <strong style={{ fontSize: "16px" }}>
+                  Tổng tiền phiếu xuất:{" "}
+                  {calculateTotalAmount().toLocaleString("vi-VN", {
+                    style: "currency",
+                    currency: "VND",
+                  })}
+                </strong>
+              </div>
             </Card>
           </Col>
         </Row>
       </Modal>
 
-      {/* Modal chọn lô hàng */}
       <SelectBatchModal
         open={batchModalOpen}
         onCancel={() => setBatchModalOpen(false)}

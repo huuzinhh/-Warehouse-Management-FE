@@ -1,5 +1,5 @@
 import React from "react";
-import { Modal, Descriptions, Table, Tag } from "antd";
+import { Modal, Descriptions, Table, Tag, Divider } from "antd";
 import dayjs from "dayjs";
 
 export default function GoodsIssueViewModal({ open, onCancel, goodsIssue }) {
@@ -17,27 +17,37 @@ export default function GoodsIssueViewModal({ open, onCancel, goodsIssue }) {
       key: "productName",
     },
     {
+      title: "Vị trí",
+      dataIndex: "locationName",
+      key: "locationName",
+      render: (v) => v || "-",
+    },
+    {
       title: "Đơn vị hiển thị",
       dataIndex: "displayUnit",
       key: "displayUnit",
+      width: 120,
     },
     {
       title: "Số lượng",
       dataIndex: "quantity",
       key: "quantity",
-      render: (v) => v?.toLocaleString(),
+      align: "right",
+      render: (v) => (v != null ? v.toLocaleString() : "-"),
     },
     {
       title: "Đơn giá",
       dataIndex: "unitPrice",
       key: "unitPrice",
-      render: (v) => v?.toLocaleString() + " ₫",
+      align: "right",
+      render: (v) => (v != null ? v.toLocaleString("vi-VN") + " ₫" : "-"),
     },
     {
       title: "Thành tiền",
       dataIndex: "totalPrice",
       key: "totalPrice",
-      render: (v) => v?.toLocaleString() + " ₫",
+      align: "right",
+      render: (v) => (v != null ? v.toLocaleString("vi-VN") + " ₫" : "-"),
     },
   ];
 
@@ -46,14 +56,19 @@ export default function GoodsIssueViewModal({ open, onCancel, goodsIssue }) {
       open={open}
       onCancel={onCancel}
       footer={null}
-      width={850}
-      title={`Chi tiết phiếu xuất kho (${goodsIssue.issueCode})`}
+      width={900}
+      title={
+        <span style={{ fontWeight: 600 }}>
+          Chi tiết phiếu xuất kho ({goodsIssue.issueCode})
+        </span>
+      }
     >
       <Descriptions
         bordered
         size="small"
         column={2}
-        labelStyle={{ fontWeight: 600, width: 200 }}
+        labelStyle={{ fontWeight: 600, width: 180 }}
+        style={{ marginBottom: 16 }}
       >
         <Descriptions.Item label="Mã phiếu xuất">
           {goodsIssue.issueCode}
@@ -79,11 +94,13 @@ export default function GoodsIssueViewModal({ open, onCancel, goodsIssue }) {
         </Descriptions.Item>
 
         <Descriptions.Item label="Tổng tiền">
-          {goodsIssue.totalAmount?.toLocaleString() + " ₫"}
+          {goodsIssue.totalAmount?.toLocaleString("vi-VN") + " ₫"}
         </Descriptions.Item>
       </Descriptions>
 
-      <h3 style={{ marginTop: 20 }}>Chi tiết hàng xuất</h3>
+      <Divider style={{ margin: "12px 0" }} />
+
+      <h3 style={{ marginBottom: 10 }}>Chi tiết hàng xuất</h3>
       <Table
         dataSource={goodsIssue.details || []}
         columns={columns}

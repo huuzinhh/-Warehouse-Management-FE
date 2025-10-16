@@ -11,6 +11,7 @@ import {
   Divider,
 } from "antd";
 import ProductService from "../service/ProductService";
+import ToastService from "../service/ToastService";
 
 export default function SelectBatchModal({
   open,
@@ -19,9 +20,7 @@ export default function SelectBatchModal({
   onSelect,
 }) {
   const [batches, setBatches] = useState([]);
-  const [selectedRow, setSelectedRow] = useState(null);
-  const [quantity, setQuantity] = useState(1);
-  const [selectedUnit, setSelectedUnit] = useState(null);
+  const [selectedRows, setSelectedRows] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -29,22 +28,131 @@ export default function SelectBatchModal({
       setLoading(true);
       ProductService.getInventoryByProductId(product.id)
         .then((res) => {
-          setBatches(res || []);
+          const mapped = (res || []).map((b) => ({
+            ...b,
+            key: b.id,
+            selectedUnit:
+              product.conversions.find((c) => c.ratioToBase === 1) ||
+              product.conversions[0],
+            quantity: 1,
+          }));
+          setBatches(mapped);
         })
         .finally(() => setLoading(false));
     }
   }, [product]);
 
-  // Set đơn vị mặc định khi product thay đổi
-  useEffect(() => {
-    if (product?.conversions?.length > 0) {
-      // Mặc định chọn base unit đầu tiên
-      const baseUnit =
-        product.conversions.find((conv) => conv.ratioToBase === 1) ||
-        product.conversions[0];
-      setSelectedUnit(baseUnit);
+  const getMaxQuantity = (record) => {
+    const unit = record.selectedUnit;
+    if (!unit) return 0;
+    return (
+      Math.floor((record.remainingQuantity / unit.ratioToBase) * 100) / 100
+    );
+  };
+
+  const handleUnitChange = (batchId, unitId) => {
+    setBatches((prev) =>
+      prev.map((b) =>
+        b.id === batchId
+          ? {
+              ...b,
+              selectedUnit: product.conversions.find((c) => c.id === unitId),
+              quantity: 1,
+            }
+          : b
+      )
+    );
+  };
+
+  const handleQuantityChange = (batchId, value) => {
+    setBatches((prev) =>
+      prev.map((b) => (b.id === batchId ? { ...b, quantity: value } : b))
+    );
+  };
+
+  const handleConfirm = () => {
+    if (selectedRows.length === 0) {
+      message.warning("Vui lòng chọn ít nhất 1 lô hàng!");
+      ToastService.warning("Vui lòng chọn ít nhất 1 lô hàng!");
+      return;
     }
-  }, [product]);
+
+    try {
+      const selectedBatchData = batches
+        .filter((b) => selectedRows.includes(b.id))
+        .map((b) => {
+          const maxQ = getMaxQuantity(b);
+          if (!b.selectedUnit || !b.quantity || b.quantity <= 0) {
+            throw new Error(`Lô ${b.batchCode}: số lượng không hợp lệ`);
+          }
+          if (b.quantity > maxQ) {
+            throw new Error(
+              `Lô ${b.batchCode}: vượt quá SL tối đa ${maxQ} ${b.selectedUnit.unitName}`
+            );
+          }
+
+          return {
+            id: `${b.id}_${b.selectedUnit.id}`,
+            batchId: b.id,
+            batchCode: b.batchCode,
+            productId: product.id,
+            productName: product.name,
+            inventoryBatchId: b.id,
+            unitConversionId: b.selectedUnit.id,
+            unitName: b.selectedUnit.unitName,
+            ratioToBase: b.selectedUnit.ratioToBase,
+            quantity: b.quantity,
+            remainingQuantity: b.remainingQuantity,
+            maxQuantity: maxQ,
+            locationName: b.locationName,
+            unitPrice: b.unitCost || 0,
+          };
+        });
+
+      // ✅ Kiểm tra trùng batch: tổng số lượng quy đổi ra đơn vị gốc
+      const overLimitBatches = [];
+      const batchTotalMap = {};
+
+      for (const batch of selectedBatchData) {
+        const totalBaseQty =
+          (batchTotalMap[batch.batchId] || 0) +
+          batch.quantity * batch.ratioToBase;
+        batchTotalMap[batch.batchId] = totalBaseQty;
+
+        // Tìm remainingQuantity của batch gốc
+        const originalBatch = batches.find((b) => b.id === batch.batchId);
+        if (
+          originalBatch &&
+          totalBaseQty > originalBatch.remainingQuantity + 1e-6
+        ) {
+          overLimitBatches.push({
+            batchCode: batch.batchCode,
+            available: originalBatch.remainingQuantity,
+          });
+        }
+      }
+
+      if (overLimitBatches.length > 0) {
+        const msg = overLimitBatches
+          .map(
+            (b) =>
+              `Lô ${b.batchCode}: tổng quy đổi vượt quá tồn kho (${b.available})`
+          )
+          .join("\n");
+        throw new Error(msg);
+      }
+
+      selectedBatchData.forEach((batch) => onSelect(batch));
+      message.success(
+        `Đã thêm ${selectedBatchData.length} lô hàng vào phiếu xuất!`
+      );
+      setSelectedRows([]);
+      onCancel();
+    } catch (error) {
+      message.error(error.message);
+      ToastService.error(error.message);
+    }
+  };
 
   const columns = [
     {
@@ -61,88 +169,55 @@ export default function SelectBatchModal({
       ),
     },
     {
-      title: "Giá nhập",
+      title: "Giá vốn (VNĐ)",
       dataIndex: "unitCost",
-      render: (cost) => (cost ? `$${cost.toLocaleString()}` : "-"),
+      render: (value) =>
+        value?.toLocaleString("vi-VN", { style: "currency", currency: "VND" }),
+    },
+    {
+      title: "Đơn vị xuất",
+      dataIndex: "unit",
+      render: (_, record) => (
+        <Select
+          value={record.selectedUnit?.id}
+          onChange={(value) => handleUnitChange(record.id, value)}
+          options={product.conversions.map((c) => ({
+            label: `${c.unitName} (x${c.ratioToBase})`,
+            value: c.id,
+          }))}
+          style={{ width: 110 }}
+        />
+      ),
+    },
+    {
+      title: "Số lượng",
+      dataIndex: "quantity",
+      render: (_, record) => (
+        <InputNumber
+          min={0.01}
+          step={0.01}
+          precision={2}
+          value={record.quantity}
+          max={getMaxQuantity(record)}
+          onChange={(v) => handleQuantityChange(record.id, v)}
+          style={{ width: 110 }}
+        />
+      ),
+    },
+    {
+      title: "Tối đa",
+      render: (_, record) =>
+        `${getMaxQuantity(record)} ${record.selectedUnit?.unitName || ""}`,
     },
   ];
-
-  // Tính số lượng tối đa có thể xuất theo đơn vị đã chọn
-  const calculateMaxQuantity = () => {
-    if (!selectedRow || !selectedUnit) return 0;
-
-    const baseQuantity = selectedRow.remainingQuantity;
-    const maxInSelectedUnit = baseQuantity / selectedUnit.ratioToBase;
-    return Math.floor(maxInSelectedUnit * 100) / 100; // Làm tròn 2 chữ số
-  };
-
-  const handleConfirm = () => {
-    if (!selectedRow) {
-      message.warning("Vui lòng chọn lô hàng!");
-      return;
-    }
-
-    if (!selectedUnit) {
-      message.warning("Vui lòng chọn đơn vị!");
-      return;
-    }
-
-    if (quantity <= 0) {
-      message.warning("Số lượng phải lớn hơn 0!");
-      return;
-    }
-
-    const maxQuantity = calculateMaxQuantity();
-    if (quantity > maxQuantity) {
-      message.warning(
-        `Số lượng không được vượt quá ${maxQuantity} ${selectedUnit.unitName}!`
-      );
-      return;
-    }
-
-    // Tạo batch object với đầy đủ thông tin
-    const batchData = {
-      id: `${selectedRow.batchId}_${selectedUnit.id}`, // Unique key cho table
-      batchId: selectedRow.batchId,
-      batchCode: selectedRow.batchCode,
-      productId: product.id,
-      productName: product.name,
-      inventoryBatchId: selectedRow.batchId,
-      unitConversionId: selectedUnit.id,
-      unitName: selectedUnit.unitName,
-      ratioToBase: selectedUnit.ratioToBase,
-      quantity: quantity,
-      remainingQuantity: selectedRow.remainingQuantity,
-      maxQuantity: maxQuantity,
-      locationName: selectedRow.locationName,
-    };
-
-    onSelect(batchData);
-
-    // Reset form
-    setSelectedRow(null);
-    setQuantity(1);
-    message.success("Đã thêm lô hàng vào phiếu xuất!");
-  };
-
-  const handleUnitChange = (unitId) => {
-    const unit = product.conversions.find((conv) => conv.id === unitId);
-    setSelectedUnit(unit);
-    // Reset quantity khi đổi đơn vị
-    setQuantity(1);
-  };
 
   return (
     <Modal
       open={open}
       title={`Chọn lô hàng - ${product?.name || ""}`}
-      onCancel={() => {
-        setSelectedRow(null);
-        setQuantity(1);
-        onCancel();
-      }}
+      onCancel={onCancel}
       footer={null}
-      width={800}
+      width={950}
     >
       {product && (
         <Alert
@@ -155,98 +230,26 @@ export default function SelectBatchModal({
       <Table
         columns={columns}
         dataSource={batches}
-        rowKey="batchId"
         loading={loading}
-        rowSelection={{
-          type: "radio",
-          onChange: (_, rows) => {
-            setSelectedRow(rows[0]);
-            setQuantity(1); // Reset quantity khi chọn lô mới
-          },
-        }}
+        rowKey="id"
         pagination={false}
-        scroll={{ y: 250 }}
+        rowSelection={{
+          type: "checkbox",
+          onChange: (keys) => setSelectedRows(keys),
+          selectedRowKeys: selectedRows,
+        }}
+        scroll={{ y: 350 }}
       />
 
-      {selectedRow && product && (
-        <div
-          style={{
-            marginTop: 16,
-            padding: 16,
-            backgroundColor: "#f5f5f5",
-            borderRadius: 6,
-          }}
-        >
-          <h4>Thông tin xuất kho</h4>
-
-          <div style={{ marginBottom: 12 }}>
-            <strong>Lô hàng:</strong> {selectedRow.batchCode} |
-            <strong> Vị trí:</strong> {selectedRow.locationName} |
-            <strong> Tồn kho (base):</strong> {selectedRow.remainingQuantity}{" "}
-            {product.baseUnit}
-          </div>
-
-          <Divider />
-
-          <div
-            style={{
-              display: "flex",
-              alignItems: "flex-end",
-              gap: 16,
-              flexWrap: "wrap",
-            }}
-          >
-            <div>
-              <div style={{ fontSize: 12, color: "#666", marginBottom: 4 }}>
-                Đơn vị xuất
-              </div>
-              <Select
-                style={{ width: 150 }}
-                value={selectedUnit?.id}
-                onChange={handleUnitChange}
-                options={product.conversions.map((conv) => ({
-                  label: `${conv.unitName} (1${conv.unitName} = ${conv.ratioToBase}${product.baseUnit})`,
-                  value: conv.id,
-                }))}
-              />
-            </div>
-
-            <div>
-              <div style={{ fontSize: 12, color: "#666", marginBottom: 4 }}>
-                Số lượng xuất{" "}
-                {selectedUnit &&
-                  `(Tối đa: ${calculateMaxQuantity()} ${
-                    selectedUnit.unitName
-                  })`}
-              </div>
-              <InputNumber
-                style={{ width: 150 }}
-                min={0.01}
-                max={calculateMaxQuantity()}
-                value={quantity}
-                onChange={setQuantity}
-                step={0.01}
-                precision={2}
-              />
-            </div>
-
-            <Button
-              type="primary"
-              onClick={handleConfirm}
-              disabled={!selectedUnit}
-            >
-              Thêm vào phiếu
-            </Button>
-          </div>
-
-          {selectedUnit && quantity > 0 && (
-            <div style={{ marginTop: 12, fontSize: 12, color: "#666" }}>
-              <strong>Quy đổi:</strong> {quantity} {selectedUnit.unitName} ={" "}
-              {quantity * selectedUnit.ratioToBase} {product.baseUnit}
-            </div>
-          )}
-        </div>
-      )}
+      <Divider />
+      <div style={{ textAlign: "right" }}>
+        <Button onClick={onCancel} style={{ marginRight: 8 }}>
+          Hủy
+        </Button>
+        <Button type="primary" onClick={handleConfirm}>
+          Thêm vào phiếu
+        </Button>
+      </div>
     </Modal>
   );
 }

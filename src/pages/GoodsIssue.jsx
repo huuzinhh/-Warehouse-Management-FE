@@ -5,6 +5,7 @@ import GoodsIssuseService from "../service/GoodsIssueService";
 import dayjs from "dayjs";
 import GoodsIssueModal from "../components/GoodsIssueModal";
 import GoodsIssueViewModal from "../components/GoodsIssueViewModal";
+import { getUserIdFromToken } from "../service/localStorageService";
 
 export default function GoodsIssue() {
   const [issues, setIssues] = useState([]);
@@ -39,16 +40,15 @@ export default function GoodsIssue() {
   const handleCreateIssue = async (payload, form, resetProducts) => {
     try {
       setSubmitLoading(true);
-      await GoodsIssuseService.create({
-        ...payload,
-        createdById: getUserIdFromToken(),
-      });
+      await GoodsIssuseService.create(payload);
       fetchIssues();
       form.resetFields();
       resetProducts();
       setModalVisible(false);
-    } catch {
+    } catch (error) {
       // axiosInstance đã hiển thị lỗi
+      console.error("Lỗi validate form:", error);
+      message.error("Vui lòng điền đầy đủ thông tin phiếu xuất!");
     } finally {
       setSubmitLoading(false);
     }
