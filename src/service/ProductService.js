@@ -97,6 +97,18 @@ const ProductService = {
       throw error;
     }
   },
+
+  getInventoryByBatchCode: async (batchCode) => {
+    try {
+      const response = await axiosInstance.get(
+        API_ENDPOINTS.product.getInventoryByBatchCode(batchCode)
+      );
+      return response.result;
+    } catch (error) {
+      console.error("Get inventory by batch code error:", error);
+      throw error;
+    }
+  },
 };
 
 export default ProductService;

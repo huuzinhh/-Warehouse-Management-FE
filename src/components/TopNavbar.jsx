@@ -18,6 +18,7 @@ import {
   LoginOutlined,
   LogoutOutlined,
   ToolOutlined,
+  InsertRowBelowOutlined,
 } from "@ant-design/icons";
 import AuthService from "../service/AuthenticationService";
 
@@ -126,6 +127,11 @@ export default function TopNavbar() {
           key: "locations",
           label: <NavLink to="/locations">Vị trí kho</NavLink>,
           icon: <EnvironmentOutlined />,
+        },
+        {
+          key: "inventory-batches",
+          label: <NavLink to="/inventories">Tồn kho</NavLink>,
+          icon: <InsertRowBelowOutlined />,
         },
       ],
     },

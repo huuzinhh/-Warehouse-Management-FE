@@ -17,6 +17,8 @@ export const API_ENDPOINTS = {
     getInventory: "/api/inventory-batches",
     getInventoryByProductId: (productId) =>
       `/api/inventory-batches/product/${productId}`,
+    getInventoryByBatchCode: (batchCode) =>
+      `/api/inventory-batches/batch/${batchCode}`,
   },
 
   category: {
@@ -57,5 +59,12 @@ export const API_ENDPOINTS = {
     getAll: "/api/goods-issues",
     delete: (id) => `/api/goods-issues/${id}`,
     cancelGoods: "/api/goods-issues/cancel",
+  },
+
+  adjustment: {
+    create: "/api/adjustments",
+    getById: (id) => `/api/adjustments/${id}`,
+    getAll: "/api/adjustments",
+    delete: (id) => `/api/adjustments/${id}`,
   },
 };

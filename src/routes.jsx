@@ -10,6 +10,8 @@ import Categories from "./pages/Categories";
 import Customers from "./pages/Customers";
 import Locations from "./pages/Locations";
 import Suppliers from "./pages/Suppliers";
+import Adjusment from "./pages/Adjustment";
+import InventoryBatch from "./pages/InventoryBatches";
 
 const router = createBrowserRouter([
   {
@@ -20,6 +22,8 @@ const router = createBrowserRouter([
       { path: "/login", element: <Login /> },
       { path: "/receipts", element: <GoodsReceipt /> },
       { path: "/issues", element: <GoodsIssue /> },
+      { path: "/adjustments", element: <Adjusment /> },
+      { path: "/inventories", element: <InventoryBatch /> },
       { path: "/reports", element: <Reports /> },
       { path: "/products", element: <Products /> },
       { path: "/categories", element: <Categories /> },
