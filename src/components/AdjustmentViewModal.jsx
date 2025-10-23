@@ -12,6 +12,12 @@ export default function AdjustmentViewModal({ open, onCancel, adjustment }) {
       key: "batchCode",
     },
     {
+      title: "Sản phẩm",
+      dataIndex: "productName",
+      key: "productName",
+      ellipsis: true,
+    },
+    {
       title: "Loại điều chỉnh",
       dataIndex: "type",
       key: "type",

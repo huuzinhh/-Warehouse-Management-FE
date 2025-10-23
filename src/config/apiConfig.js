@@ -1,9 +1,21 @@
+import create from "@ant-design/icons/lib/components/IconFont";
+
 export const API_BASE_URL = "http://localhost:8080";
 
 export const API_ENDPOINTS = {
   auth: {
     login: "/auth/login",
     logout: "/auth/logout",
+  },
+
+  user: {
+    create: "/api/users",
+    update: (id) => `/api/users/${id}`,
+    getById: (id) => `/api/users/${id}`,
+    getAll: "/api/users",
+    delete: (id) => `/api/users/${id}`,
+    changeStatus: (id) => `/api/users/toggle/${id}`,
+    changePassword: "/api/users/change-password",
   },
 
   product: {

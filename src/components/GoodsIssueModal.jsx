@@ -26,6 +26,7 @@ import PartnerService from "../service/PartnerService";
 import SelectBatchModal from "./SelectBatchModal";
 import { getUserIdFromToken } from "../service/localStorageService";
 import ToastService from "../service/ToastService";
+import GoodsIssuseService from "../service/GoodsIssueService";
 
 const { Option } = Select;
 
@@ -187,22 +188,16 @@ export default function GoodsIssueModal({ open, onCancel, onOk, loading }) {
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
+
       if (selectedBatches.length === 0) {
-        message.error("Vui lòng chọn ít nhất 1 lô hàng để xuất!");
         ToastService.error("Vui lòng chọn ít nhất 1 lô hàng để xuất!");
         return;
       }
 
       const invalidBatch = selectedBatches.find(
-        (batch) =>
-          !batch.quantity ||
-          batch.quantity <= 0 ||
-          batch.quantity > batch.maxQuantity
+        (b) => !b.quantity || b.quantity <= 0 || b.quantity > b.maxQuantity
       );
       if (invalidBatch) {
-        message.error(
-          `Số lượng xuất của lô ${invalidBatch.batchCode} không hợp lệ!`
-        );
         ToastService.error(
           `Số lượng xuất của lô ${invalidBatch.batchCode} không hợp lệ!`
         );
@@ -210,38 +205,54 @@ export default function GoodsIssueModal({ open, onCancel, onOk, loading }) {
       }
 
       const createdById = getUserIdFromToken();
-
-      // ✅ Sinh mã tự động nếu không nhập
       const generateIssueCode = () => {
         const now = new Date();
         const yyyymmdd = now.toISOString().slice(0, 10).replace(/-/g, "");
-        const randomNum = Math.floor(Math.random() * 900 + 100); // ngẫu nhiên 3 chữ số
+        const randomNum = Math.floor(Math.random() * 900 + 100);
         return `PX${yyyymmdd}${randomNum}`;
       };
 
       const issueCode = values.issueCode?.trim() || generateIssueCode();
+      const issueDate =
+        values.issueDate?.format("YYYY-MM-DDTHH:mm:ss") ||
+        new Date().toISOString();
 
-      const payload = {
-        issueCode,
-        issueDate:
-          values.issueDate?.format("YYYY-MM-DDTHH:mm:ss") ||
-          new Date().toISOString(),
-        customerId: values.customerId,
-        createdById,
-        issueType: "SALE",
-        amountPaid: 0,
-        details: selectedBatches.map((b) => ({
-          productId: b.productId,
-          inventoryBatchId: b.batchId,
-          unitConversionId: b.unitConversionId,
-          quantity: b.quantity,
-        })),
-      };
+      let payload;
 
-      onOk(payload, form, () => {
+      if (values.issueType === "CANCEL") {
+        payload = {
+          issueCode,
+          issueDate,
+          createdById,
+          issueType: "CANCEL",
+          details: selectedBatches.map((b) => ({
+            inventoryBatchId: b.batchId,
+            unitConversionId: b.unitConversionId,
+            quantity: b.quantity,
+          })),
+        };
+      } else {
+        payload = {
+          issueCode,
+          issueDate,
+          createdById,
+          issueType: values.issueType,
+          customerId: values.issueType === "SALE" ? values.customerId : null,
+          amountPaid: 0,
+          details: selectedBatches.map((b) => ({
+            productId: b.productId,
+            inventoryBatchId: b.batchId,
+            unitConversionId: b.unitConversionId,
+            quantity: b.quantity,
+          })),
+        };
+      }
+
+      // ✅ Gọi callback cha thay vì tự xử lý API
+      await onOk(payload, form, () => {
         setSelectedBatches([]);
         setSearchTerm("");
-        form.resetFields();
+        setSelectedProduct(null);
       });
     } catch (error) {
       console.error("Lỗi validate form:", error);
@@ -280,29 +291,60 @@ export default function GoodsIssueModal({ open, onCancel, onOk, loading }) {
             <Card title="Thông tin phiếu xuất" bordered={false}>
               <Form form={form} layout="vertical">
                 <Form.Item label="Mã phiếu xuất" name="issueCode">
-                  <Input placeholder="Để trống để tự tạo" />
+                  <Input placeholder="VD: PX0001 hoặc để trống để tự tạo" />
                 </Form.Item>
                 <Form.Item
-                  label="Khách hàng"
-                  name="customerId"
-                  rules={[{ required: true, message: "Chọn khách hàng" }]}
+                  label="Loại xuất hàng"
+                  name="issueType"
+                  initialValue="SALE"
+                  rules={[{ required: true, message: "Chọn loại xuất hàng" }]}
                 >
                   <Select
-                    showSearch
-                    placeholder="Chọn khách hàng"
-                    filterOption={(input, option) =>
-                      option.children
-                        .toLowerCase()
-                        .includes(input.toLowerCase())
-                    }
+                    onChange={(value) => form.setFieldValue("issueType", value)}
                   >
-                    {customers.map((customer) => (
-                      <Option key={customer.id} value={customer.id}>
-                        {customer.name} - {customer.phone}
-                      </Option>
-                    ))}
+                    <Option value="SALE">Bán hàng</Option>
+                    <Option value="CANCEL">Hủy hàng (hư hỏng)</Option>
                   </Select>
                 </Form.Item>
+                <Form.Item
+                  noStyle
+                  shouldUpdate={(prev, curr) =>
+                    prev.issueType !== curr.issueType
+                  }
+                >
+                  {({ getFieldValue }) =>
+                    getFieldValue("issueType") === "SALE" && (
+                      <Form.Item
+                        label="Khách hàng"
+                        name="customerId"
+                        rules={[{ required: true, message: "Chọn khách hàng" }]}
+                      >
+                        <Select
+                          showSearch
+                          placeholder="Chọn khách hàng"
+                          optionFilterProp="label"
+                          filterOption={(input, option) =>
+                            (option?.label ?? "")
+                              .toLowerCase()
+                              .includes(input.toLowerCase())
+                          }
+                          filterSort={(optionA, optionB) =>
+                            (optionA?.label ?? "")
+                              .toLowerCase()
+                              .localeCompare(
+                                (optionB?.label ?? "").toLowerCase()
+                              )
+                          }
+                          options={customers.map((c) => ({
+                            value: c.id,
+                            label: `${c.name} - ${c.phone}`,
+                          }))}
+                        />
+                      </Form.Item>
+                    )
+                  }
+                </Form.Item>
+
                 <Form.Item
                   label="Ngày xuất"
                   name="issueDate"

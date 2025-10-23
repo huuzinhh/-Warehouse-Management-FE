@@ -191,7 +191,6 @@ export default function AdjustmentModal({ open, onCancel, onOk, userId }) {
 
       const batch = await ProductService.getInventoryByBatchCode(code);
       if (!batch) {
-        ToastService.error("Lô hàng không tồn tại!");
         return;
       }
 
@@ -225,7 +224,6 @@ export default function AdjustmentModal({ open, onCancel, onOk, userId }) {
       console.log("✅ Đã thêm lô hàng thành công:", batch.batchCode);
     } catch (err) {
       console.error(err);
-      ToastService.error("Không tìm thấy lô hàng!");
     } finally {
       isProcessingRef.current = false;
     }
@@ -403,7 +401,6 @@ export default function AdjustmentModal({ open, onCancel, onOk, userId }) {
                     width: 320,
                     height: 240,
                     borderRadius: 8,
-                    transform: "scaleX(-1)",
                     objectFit: "cover",
                   }}
                   autoPlay
@@ -424,9 +421,10 @@ export default function AdjustmentModal({ open, onCancel, onOk, userId }) {
                 <Input
                   placeholder="Nhập hoặc quét mã lô"
                   style={{ width: 200 }}
-                  onPressEnter={(e) =>
-                    handleAddBatchByCode(e.target.value.trim())
-                  }
+                  onPressEnter={(e) => {
+                    e.preventDefault();
+                    handleAddBatchByCode(e.target.value.trim());
+                  }}
                 />
                 <Button
                   icon={<BarcodeOutlined />}

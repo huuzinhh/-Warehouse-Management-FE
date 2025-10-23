@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Table, Button, Space, Modal } from "antd";
+import { Table, Button, Space, Modal, Tag } from "antd";
 import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 import GoodsIssuseService from "../service/GoodsIssueService";
 import dayjs from "dayjs";
@@ -40,15 +40,20 @@ export default function GoodsIssue() {
   const handleCreateIssue = async (payload, form, resetProducts) => {
     try {
       setSubmitLoading(true);
-      await GoodsIssuseService.create(payload);
-      fetchIssues();
+
+      if (payload.issueType === "CANCEL") {
+        await GoodsIssuseService.cancelGoods(payload);
+      } else {
+        await GoodsIssuseService.create(payload);
+      }
+
+      await fetchIssues();
       form.resetFields();
       resetProducts();
       setModalVisible(false);
     } catch (error) {
-      // axiosInstance đã hiển thị lỗi
-      console.error("Lỗi validate form:", error);
-      message.error("Vui lòng điền đầy đủ thông tin phiếu xuất!");
+      console.error("Lỗi khi tạo phiếu:", error);
+      ToastService.error("Vui lòng kiểm tra lại thông tin phiếu!");
     } finally {
       setSubmitLoading(false);
     }
@@ -87,6 +92,32 @@ export default function GoodsIssue() {
     },
     { title: "Khách hàng", dataIndex: "customerName" },
     { title: "Người lập phiếu", dataIndex: "createdByName" },
+    {
+      title: "Loại",
+      dataIndex: "issueType",
+      render: (type) => {
+        let color = "default";
+        let label = type;
+
+        switch (type) {
+          case "SALE":
+            color = "green";
+            label = "Bán hàng";
+            break;
+          case "CANCEL":
+            color = "red";
+            label = "Hủy hàng";
+            break;
+          default:
+            color = "blue";
+            label = "Khác";
+            break;
+        }
+
+        return <Tag color={color}>{label}</Tag>;
+      },
+    },
+
     {
       title: "Thao tác",
       render: (_, r) => (

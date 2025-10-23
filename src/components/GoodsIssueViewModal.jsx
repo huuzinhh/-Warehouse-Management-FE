@@ -78,10 +78,8 @@ export default function GoodsIssueViewModal({ open, onCancel, goodsIssue }) {
         </Descriptions.Item>
 
         <Descriptions.Item label="Loại xuất kho">
-          <Tag color={goodsIssue.issueType === "SALE" ? "blue" : "green"}>
-            {goodsIssue.issueType === "SALE"
-              ? "Bán hàng"
-              : goodsIssue.issueType}
+          <Tag color={goodsIssue.issueType === "SALE" ? "green" : "red"}>
+            {goodsIssue.issueType === "SALE" ? "Bán hàng" : "Hủy hàng"}
           </Tag>
         </Descriptions.Item>
 

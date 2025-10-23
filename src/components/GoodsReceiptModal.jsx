@@ -360,8 +360,17 @@ export default function GoodsReceiptModal({ open, onCancel, onOk, loading }) {
         return;
       }
 
+      const generateReceiptCode = () => {
+        const now = new Date();
+        const yyyymmdd = now.toISOString().slice(0, 10).replace(/-/g, "");
+        const randomNum = Math.floor(Math.random() * 900 + 100);
+        return `PN${yyyymmdd}${randomNum}`;
+      };
+
+      const receiptCode = values.receiptCode?.trim() || generateReceiptCode();
+
       const payload = {
-        receiptCode: values.receiptCode,
+        receiptCode: receiptCode,
         partnerId: values.partnerId,
         createdById: getUserIdFromToken(),
         receiptDate: values.receiptDate?.format("YYYY-MM-DDTHH:mm:ss"),
@@ -420,14 +429,11 @@ export default function GoodsReceiptModal({ open, onCancel, onOk, loading }) {
           <Col span={5}>
             <Card title="Thông tin cơ bản" bordered={false} size="middle">
               <Form form={form} layout="vertical">
-                <Form.Item
-                  label="Mã phiếu nhập"
-                  name="receiptCode"
-                  rules={[
-                    { required: true, message: "Vui lòng nhập mã phiếu" },
-                  ]}
-                >
-                  <Input placeholder="VD: PN001" size="middle" />
+                <Form.Item label="Mã phiếu nhập" name="receiptCode">
+                  <Input
+                    placeholder="VD: PN0001 hoặc để trống để tự tạo"
+                    size="middle"
+                  />
                 </Form.Item>
 
                 <Form.Item

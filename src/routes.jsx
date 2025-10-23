@@ -12,6 +12,7 @@ import Locations from "./pages/Locations";
 import Suppliers from "./pages/Suppliers";
 import Adjusment from "./pages/Adjustment";
 import InventoryBatch from "./pages/InventoryBatches";
+import Users from "./pages/User";
 
 const router = createBrowserRouter([
   {
@@ -20,6 +21,7 @@ const router = createBrowserRouter([
     children: [
       { path: "/", element: <Dashboard /> },
       { path: "/login", element: <Login /> },
+      { path: "/users", element: <Users /> },
       { path: "/receipts", element: <GoodsReceipt /> },
       { path: "/issues", element: <GoodsIssue /> },
       { path: "/adjustments", element: <Adjusment /> },

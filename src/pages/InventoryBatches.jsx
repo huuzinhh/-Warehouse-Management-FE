@@ -33,6 +33,11 @@ export default function InventoryBatch() {
     { title: "Sản phẩm", dataIndex: "productName" },
     { title: "Vị trí kho", dataIndex: "locationName" },
     {
+      title: "Số lượng ban đầu",
+      dataIndex: "initialQuantity",
+      align: "center",
+    },
+    {
       title: "Số lượng còn",
       dataIndex: "remainingQuantity",
       align: "center",
