@@ -43,8 +43,8 @@ export default function TopNavbar() {
   // Menu chính (ở giữa thanh navbar)
   const mainMenuItems = [
     {
-      key: "home",
-      label: <NavLink to="/">Tổng quan</NavLink>,
+      key: "reports",
+      label: <NavLink to="/reports">Tổng quan</NavLink>,
       icon: <DashboardOutlined />,
     },
     {
@@ -79,11 +79,6 @@ export default function TopNavbar() {
           label: <NavLink to="/categories">Danh mục</NavLink>,
           icon: <TagsOutlined />,
         },
-        // {
-        //   key: "unit-conversions",
-        //   label: <NavLink to="/unit-conversions">Quy đổi đơn vị</NavLink>,
-        //   icon: <RetweetOutlined />,
-        // },
       ],
     },
     {
@@ -104,17 +99,17 @@ export default function TopNavbar() {
       ],
     },
     {
-      key: "inventory",
+      key: "inventories",
       label: "Kho hàng",
       icon: <DatabaseOutlined />,
       children: [
         {
-          key: "imports",
+          key: "receipts",
           label: <NavLink to="/receipts">Nhập kho</NavLink>,
           icon: <LoginOutlined />,
         },
         {
-          key: "exports",
+          key: "issues",
           label: <NavLink to="/issues">Xuất kho</NavLink>,
           icon: <LogoutOutlined />,
         },
@@ -129,7 +124,7 @@ export default function TopNavbar() {
           icon: <EnvironmentOutlined />,
         },
         {
-          key: "inventory-batches",
+          key: "inventories",
           label: <NavLink to="/inventories">Tồn kho</NavLink>,
           icon: <InsertRowBelowOutlined />,
         },

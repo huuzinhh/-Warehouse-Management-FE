@@ -1,6 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { Table, Button, Space, Modal } from "antd";
-import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
+import {
+  PlusOutlined,
+  DeleteOutlined,
+  DownloadOutlined,
+  FilePdfOutlined,
+} from "@ant-design/icons";
 import GoodsReceiptService from "../service/GoodsReceiptService";
 import dayjs from "dayjs";
 import GoodsReceiptModal from "../components/GoodsReceiptModal";
@@ -46,6 +51,39 @@ export default function GoodsReceipt() {
       // lỗi đã được axiosInstance xử lý
     } finally {
       setSubmitLoading(false);
+    }
+  };
+
+  const handleExportExcel = async () => {
+    try {
+      const blob = new Blob([await GoodsReceiptService.exportExcel()], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "goods_receipts.xlsx");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      console.error("Export Excel failed:", err);
+    }
+  };
+
+  const handleExportPdf = async (record) => {
+    try {
+      const response = await GoodsReceiptService.exportPdf(record.id);
+      const blob = new Blob([response], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `${record.receiptCode}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      console.error("Export PDF failed:", err);
     }
   };
 
@@ -107,6 +145,9 @@ export default function GoodsReceipt() {
           >
             Xóa
           </Button>
+          <Button icon={<FilePdfOutlined />} onClick={() => handleExportPdf(r)}>
+            In
+          </Button>
         </Space>
       ),
     },
@@ -122,13 +163,18 @@ export default function GoodsReceipt() {
         }}
       >
         <h2>Quản lý phiếu nhập kho</h2>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => setModalVisible(true)}
-        >
-          Thêm phiếu nhập
-        </Button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <Button icon={<DownloadOutlined />} onClick={handleExportExcel}>
+            Xuất Excel
+          </Button>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => setModalVisible(true)}
+          >
+            Thêm phiếu nhập
+          </Button>
+        </div>
       </div>
 
       <Table

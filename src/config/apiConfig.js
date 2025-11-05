@@ -63,6 +63,8 @@ export const API_ENDPOINTS = {
     getById: (id) => `/api/goods-receipts/${id}`,
     getAll: "/api/goods-receipts",
     delete: (id) => `/api/goods-receipts/${id}`,
+    exportExcel: "/api/goods-receipts/export/excel",
+    exportPdf: (id) => `/api/goods-receipts/${id}/export/pdf`,
   },
 
   goodsissue: {

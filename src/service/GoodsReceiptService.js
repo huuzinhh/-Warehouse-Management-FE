@@ -43,6 +43,18 @@ const GoodsReceiptService = {
       throw error;
     }
   },
+
+  exportExcel: () => {
+    return axiosInstance.get(API_ENDPOINTS.goodsreceipt.exportExcel, {
+      responseType: "blob", // ⚠️ bắt buộc để nhận file nhị phân
+    });
+  },
+
+  exportPdf: (id) => {
+    return axiosInstance.get(API_ENDPOINTS.goodsreceipt.exportPdf(id), {
+      responseType: "blob", // nhận dạng file nhị phân
+    });
+  },
 };
 
 export default GoodsReceiptService;

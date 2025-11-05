@@ -11,14 +11,13 @@ export default function Login() {
     try {
       // Gọi service đăng nhập
       await AuthService.login(values);
-      
+
       message.success("Đăng nhập thành công 🎉");
-      
+
       // Chuyển hướng sau 1 giây
       setTimeout(() => {
-        window.location.href = "/";
+        window.location.href = "/reports";
       }, 1000);
-      
     } catch (err) {
       console.error("Login error:", err);
       message.error(err.message || "Sai tài khoản hoặc mật khẩu!");
@@ -37,11 +36,7 @@ export default function Login() {
         background: "#f0f2f5",
       }}
     >
-      <Card
-        title="Warehouse Login"
-        bordered={false}
-        style={{ width: 350 }}
-      >
+      <Card title="Warehouse Login" bordered={false} style={{ width: 350 }}>
         <Form
           name="login"
           initialValues={{ remember: true }}
