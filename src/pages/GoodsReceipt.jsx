@@ -22,7 +22,7 @@ export default function GoodsReceipt() {
     try {
       setLoading(true);
       const data = await GoodsReceiptService.getAll();
-      setReceipts(data || []);
+      setReceipts((data || []).reverse());
     } catch {
       // lỗi đã được toast trong axiosInstance
     } finally {

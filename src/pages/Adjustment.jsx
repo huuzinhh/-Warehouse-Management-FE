@@ -21,7 +21,7 @@ export default function Adjusment() {
       const res = await AdjustmentService.getAll();
       console.log("res: ", res);
 
-      setAdjustments(res || []);
+      setAdjustments((res || []).reverse());
     } catch (err) {
       console.error(err);
       message.error("Không thể tải danh sách phiếu kiểm kho!");

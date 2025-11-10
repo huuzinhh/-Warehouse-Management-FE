@@ -24,7 +24,7 @@ export default function GoodsIssue() {
     try {
       setLoading(true);
       const data = await GoodsIssuseService.getAll();
-      setIssues(data || []);
+      setIssues((data || []).reverse());
     } catch {
       // axiosInstance đã hiển thị lỗi
     } finally {
