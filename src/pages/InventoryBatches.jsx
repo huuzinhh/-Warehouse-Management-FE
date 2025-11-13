@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Table, Button, Tag, Space, message } from "antd";
+import { EyeOutlined } from "@ant-design/icons";
 import axiosInstance from "../service/axiosInstance";
 import BatchQRCodeModal from "../components/BatchQRCodeModal";
 
@@ -55,12 +56,13 @@ export default function InventoryBatch() {
         <Space>
           <Button
             type="primary"
+            icon={<EyeOutlined />}
             onClick={() => {
               setSelectedBatch(record);
               setShowQR(true);
             }}
           >
-            Xem mã QR
+            QR
           </Button>
         </Space>
       ),
@@ -69,11 +71,22 @@ export default function InventoryBatch() {
 
   return (
     <>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+        }}
+      >
+        <h2>
+          <b>TỒN KHO</b>
+        </h2>
+      </div>
+
       <Table
         rowKey="id"
         columns={columns}
         dataSource={batches}
-        pagination={{ pageSize: 8 }}
+        pagination={{ pageSize: 7 }}
       />
 
       <BatchQRCodeModal

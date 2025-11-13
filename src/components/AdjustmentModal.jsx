@@ -12,6 +12,7 @@ import {
   Col,
   Table,
   Divider,
+  DatePicker,
 } from "antd";
 import {
   BarcodeOutlined,
@@ -269,6 +270,9 @@ export default function AdjustmentModal({ open, onCancel, onOk, userId }) {
     const payload = {
       code: values.code,
       createdBy: getUserIdFromToken(),
+      adjustDate: values.adjustDate
+        ? values.adjustDate.format("YYYY-MM-DDTHH:mm:ss")
+        : dayjs().format("YYYY-MM-DDTHH:mm:ss"),
       details,
     };
 
@@ -367,8 +371,16 @@ export default function AdjustmentModal({ open, onCancel, onOk, userId }) {
               <Input />
             </Form.Item>
 
-            <Form.Item label="Ngày tạo">
-              <Input value={new Date().toLocaleString()} disabled />
+            <Form.Item
+              label="Ngày điều chỉnh"
+              name="adjustDate"
+              rules={[{ required: true, message: "Chọn ngày điều chỉnh" }]}
+            >
+              <DatePicker
+                showTime
+                style={{ width: "100%" }}
+                format="YYYY-MM-DD HH:mm:ss"
+              />
             </Form.Item>
 
             <Divider />

@@ -204,21 +204,22 @@ export default function Suppliers() {
   ];
 
   return (
-    <div style={{ padding: 20, background: "#fff" }}>
+    <>
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
-          marginBottom: 16,
         }}
       >
-        <h2>Quản lý nhà cung cấp</h2>
+        <h2>
+          <b>NHÀ CUNG CẤP</b>
+        </h2>
         <Button
           type="primary"
           icon={<PlusOutlined />}
           onClick={() => showModal()}
         >
-          Thêm nhà cung cấp
+          Thêm
         </Button>
       </div>
 
@@ -226,7 +227,7 @@ export default function Suppliers() {
         rowKey="id"
         dataSource={suppliers}
         columns={columns}
-        pagination={{ pageSize: 5 }}
+        pagination={{ pageSize: 6 }}
         loading={loading}
       />
 
@@ -293,6 +294,6 @@ export default function Suppliers() {
           <strong>{deleteRecord?.name}</strong> không?
         </p>
       </Modal>
-    </div>
+    </>
   );
 }

@@ -133,15 +133,16 @@ export default function Users() {
   ];
 
   return (
-    <div style={{ padding: 20, background: "#fff" }}>
+    <>
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
-          marginBottom: 16,
         }}
       >
-        <h2>Quản lý người dùng</h2>
+        <h2>
+          <b>NGƯỜI DÙNG</b>
+        </h2>
         <Button
           type="primary"
           icon={<PlusOutlined />}
@@ -160,7 +161,7 @@ export default function Users() {
         dataSource={users}
         columns={columns}
         loading={loading}
-        pagination={{ pageSize: 5 }}
+        pagination={{ pageSize: 6 }}
       />
 
       {/* 🔹 Modal xác nhận xóa */}
@@ -227,6 +228,6 @@ export default function Users() {
           }
         }}
       />
-    </div>
+    </>
   );
 }

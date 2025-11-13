@@ -188,21 +188,22 @@ export default function Customers() {
   ];
 
   return (
-    <div style={{ padding: 20, background: "#fff" }}>
+    <>
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
-          marginBottom: 16,
         }}
       >
-        <h2>Quản lý khách hàng</h2>
+        <h2>
+          <b>KHÁCH HÀNG</b>
+        </h2>
         <Button
           type="primary"
           icon={<PlusOutlined />}
           onClick={() => showModal()}
         >
-          Thêm khách hàng
+          Thêm
         </Button>
       </div>
 
@@ -210,7 +211,7 @@ export default function Customers() {
         rowKey="id"
         dataSource={customers}
         columns={columns}
-        pagination={{ pageSize: 5 }}
+        pagination={{ pageSize: 6 }}
         loading={loading}
       />
 
@@ -277,6 +278,6 @@ export default function Customers() {
           không?
         </p>
       </Modal>
-    </div>
+    </>
   );
 }

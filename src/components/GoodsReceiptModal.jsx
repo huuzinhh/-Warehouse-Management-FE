@@ -497,7 +497,7 @@ export default function GoodsReceiptModal({ open, onCancel, onOk, loading }) {
                   </div>
                 </Form.Item>
 
-                <Form.Item
+                {/* <Form.Item
                   label="Đã thanh toán"
                   name="paidAmount"
                   rules={[
@@ -516,7 +516,7 @@ export default function GoodsReceiptModal({ open, onCancel, onOk, loading }) {
                     placeholder="Nhập số tiền đã thanh toán"
                     addonAfter="₫"
                   />
-                </Form.Item>
+                </Form.Item> */}
               </Form>
             </Card>
           </Col>
@@ -605,9 +605,36 @@ export default function GoodsReceiptModal({ open, onCancel, onOk, loading }) {
 
       <ProductModal
         open={productModalOpen}
-        onCancel={() => setProductModalOpen(false)}
-        onOk={handleProductAdded}
         mode="create"
+        onCancel={() => setProductModalOpen(false)}
+        onOk={async (values, form) => {
+          try {
+            // Chuẩn bị payload đúng định dạng backend cần
+            const payload = {
+              sku: values.sku,
+              name: values.name,
+              baseUnit: values.baseUnit,
+              minStockLevel: values.minStockLevel,
+              categoryId: values.categoryId,
+              conversions:
+                values.conversions?.map((c) => ({
+                  unitName: c.unitName,
+                  ratioToBase: c.ratioToBase,
+                })) || [],
+            };
+
+            // 🔹 Gọi API tạo sản phẩm thật
+            const created = await ProductService.create(payload);
+
+            // 🔹 Thêm sản phẩm mới vào danh sách đang hiển thị
+            setProducts((prev) => [...prev, created]);
+
+            setProductModalOpen(false);
+            form.resetFields();
+          } catch (err) {
+            console.error("Lỗi khi thêm sản phẩm:", err);
+          }
+        }}
       />
     </>
   );

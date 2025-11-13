@@ -197,7 +197,7 @@ export default function Shelves() {
   ];
 
   return (
-    <div style={{ padding: 20, background: "#fff" }}>
+    <>
       <div
         style={{
           display: "flex",
@@ -205,13 +205,15 @@ export default function Shelves() {
           marginBottom: 16,
         }}
       >
-        <h2>Quản lý vị trí</h2>
+        <h2>
+          <b>VỊ TRÍ</b>
+        </h2>
         <Button
           type="primary"
           icon={<PlusOutlined />}
           onClick={() => showModal()}
         >
-          Thêm vị trí
+          Thêm
         </Button>
       </div>
 
@@ -219,7 +221,7 @@ export default function Shelves() {
         rowKey="id"
         dataSource={shelves}
         columns={columns}
-        pagination={{ pageSize: 5 }}
+        pagination={{ pageSize: 6 }}
         loading={loading}
       />
 
@@ -239,7 +241,7 @@ export default function Shelves() {
           </Form.Item>
           <Form.Item
             name="type"
-            label="Loại kệ"
+            label="Loại vị trị"
             rules={[{ required: true, message: "Vui lòng chọn loại vị trí" }]}
           >
             <Select placeholder="Chọn loại vị trí">
@@ -264,6 +266,6 @@ export default function Shelves() {
       >
         <p>Bạn có chắc muốn xóa kệ "{deleteRecord?.name}"?</p>
       </Modal>
-    </div>
+    </>
   );
 }

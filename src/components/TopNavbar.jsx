@@ -49,18 +49,13 @@ export default function TopNavbar() {
     },
     {
       key: "users",
-      label: "Người dùng & Quyền",
+      label: "Người dùng",
       icon: <TeamOutlined />,
       children: [
         {
           key: "users-list",
           label: <NavLink to="/users">Người dùng</NavLink>,
           icon: <UserOutlined />,
-        },
-        {
-          key: "roles",
-          label: <NavLink to="/roles">Vai trò</NavLink>,
-          icon: <SafetyCertificateOutlined />,
         },
       ],
     },

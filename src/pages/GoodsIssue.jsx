@@ -1,11 +1,15 @@
 import React, { useEffect, useState } from "react";
 import { Table, Button, Space, Modal, Tag } from "antd";
-import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
+import {
+  PlusOutlined,
+  DeleteOutlined,
+  DownloadOutlined,
+  FilePdfOutlined,
+} from "@ant-design/icons";
 import GoodsIssuseService from "../service/GoodsIssueService";
 import dayjs from "dayjs";
 import GoodsIssueModal from "../components/GoodsIssueModal";
 import GoodsIssueViewModal from "../components/GoodsIssueViewModal";
-import { getUserIdFromToken } from "../service/localStorageService";
 
 export default function GoodsIssue() {
   const [issues, setIssues] = useState([]);
@@ -40,20 +44,17 @@ export default function GoodsIssue() {
   const handleCreateIssue = async (payload, form, resetProducts) => {
     try {
       setSubmitLoading(true);
-
       if (payload.issueType === "CANCEL") {
         await GoodsIssuseService.cancelGoods(payload);
       } else {
         await GoodsIssuseService.create(payload);
       }
-
       await fetchIssues();
       form.resetFields();
       resetProducts();
       setModalVisible(false);
     } catch (error) {
       console.error("Lỗi khi tạo phiếu:", error);
-      ToastService.error("Vui lòng kiểm tra lại thông tin phiếu!");
     } finally {
       setSubmitLoading(false);
     }
@@ -78,6 +79,41 @@ export default function GoodsIssue() {
     }
   };
 
+  // 🔹 Xuất Excel
+  const handleExportExcel = async () => {
+    try {
+      const blob = new Blob([await GoodsIssuseService.exportExcel()], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "goods_issues.xlsx");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      console.error("Export Excel failed:", err);
+    }
+  };
+
+  // 🔹 Xuất PDF (cho từng phiếu)
+  const handleExportPdf = async (record) => {
+    try {
+      const response = await GoodsIssuseService.exportPdf(record.id);
+      const blob = new Blob([response], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `${record.issueCode}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      console.error("Export PDF failed:", err);
+    }
+  };
+
   const columns = [
     { title: "Mã phiếu", dataIndex: "issueCode" },
     {
@@ -98,7 +134,6 @@ export default function GoodsIssue() {
       render: (type) => {
         let color = "default";
         let label = type;
-
         switch (type) {
           case "SALE":
             color = "green";
@@ -113,11 +148,9 @@ export default function GoodsIssue() {
             label = "Khác";
             break;
         }
-
         return <Tag color={color}>{label}</Tag>;
       },
     },
-
     {
       title: "Thao tác",
       render: (_, r) => (
@@ -142,35 +175,44 @@ export default function GoodsIssue() {
           >
             Xóa
           </Button>
+          <Button icon={<FilePdfOutlined />} onClick={() => handleExportPdf(r)}>
+            In
+          </Button>
         </Space>
       ),
     },
   ];
 
   return (
-    <div style={{ padding: 20, background: "#fff" }}>
+    <>
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
-          marginBottom: 16,
         }}
       >
-        <h2>Quản lý phiếu xuất kho</h2>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => setModalVisible(true)}
-        >
-          Thêm phiếu xuất
-        </Button>
+        <h2>
+          <b>XUẤT KHO</b>
+        </h2>
+        <div style={{ display: "flex", gap: 8 }}>
+          <Button icon={<DownloadOutlined />} onClick={handleExportExcel}>
+            Xuất Excel
+          </Button>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => setModalVisible(true)}
+          >
+            Thêm
+          </Button>
+        </div>
       </div>
 
       <Table
         rowKey="id"
         dataSource={issues}
         columns={columns}
-        pagination={{ pageSize: 5 }}
+        pagination={{ pageSize: 6 }}
         loading={loading}
       />
 
@@ -189,7 +231,7 @@ export default function GoodsIssue() {
           setViewVisible(false);
           setSelectedIssue(null);
         }}
-        goodsIssue={selectedIssue} // ✅ đổi từ issue → goodsIssue
+        goodsIssue={selectedIssue}
       />
 
       {/* 🔹 Modal xác nhận xóa */}
@@ -210,6 +252,6 @@ export default function GoodsIssue() {
           <strong>{deleteRecord?.issueCode}</strong> không?
         </p>
       </Modal>
-    </div>
+    </>
   );
 }

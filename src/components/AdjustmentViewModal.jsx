@@ -83,7 +83,7 @@ export default function AdjustmentViewModal({ open, onCancel, adjustment }) {
       open={open}
       onCancel={onCancel}
       footer={null}
-      width={900}
+      width={1200}
       title={
         <span style={{ fontWeight: 600 }}>
           Chi tiết phiếu điều chỉnh ({adjustment.code})

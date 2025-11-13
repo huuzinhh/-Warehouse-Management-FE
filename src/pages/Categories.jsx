@@ -142,21 +142,22 @@ export default function Categories() {
   ];
 
   return (
-    <div style={{ padding: 20, background: "#fff" }}>
+    <>
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
-          marginBottom: 16,
         }}
       >
-        <h2>Quản lý danh mục</h2>
+        <h2>
+          <b>DANH MỤC SẢN PHẨM</b>
+        </h2>
         <Button
           type="primary"
           icon={<PlusOutlined />}
           onClick={() => openModal()}
         >
-          Thêm danh mục
+          Thêm
         </Button>
       </div>
 
@@ -164,7 +165,7 @@ export default function Categories() {
         rowKey="id"
         dataSource={categories}
         columns={columns}
-        pagination={{ pageSize: 5 }}
+        pagination={{ pageSize: 6 }}
         loading={loading}
       />
 
@@ -195,6 +196,6 @@ export default function Categories() {
           Hành động này không thể hoàn tác.
         </p>
       </Modal>
-    </div>
+    </>
   );
 }

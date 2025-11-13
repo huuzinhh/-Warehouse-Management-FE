@@ -39,7 +39,7 @@ const AdjusmentService = {
 
   delete: async (id) => {
     try {
-      const response = await axiosInstance.delete(
+      const response = await axiosInstance.put(
         API_ENDPOINTS.adjustment.delete(id)
       );
       return response.message;
@@ -47,6 +47,18 @@ const AdjusmentService = {
       console.error("Delete category error:", error);
       throw error;
     }
+  },
+
+  exportExcel: () => {
+    return axiosInstance.get(API_ENDPOINTS.adjustment.exportExcel, {
+      responseType: "blob", // ⚠️ bắt buộc để nhận file nhị phân
+    });
+  },
+
+  exportPdf: (id) => {
+    return axiosInstance.get(API_ENDPOINTS.adjustment.exportPdf(id), {
+      responseType: "blob", // nhận dạng file nhị phân
+    });
   },
 };
 

@@ -73,12 +73,16 @@ export const API_ENDPOINTS = {
     getAll: "/api/goods-issues",
     delete: (id) => `/api/goods-issues/${id}`,
     cancelGoods: "/api/goods-issues/cancel",
+    exportExcel: "/api/goods-issues/export/excel",
+    exportPdf: (id) => `/api/goods-issues/${id}/export/pdf`,
   },
 
   adjustment: {
     create: "/api/adjustments",
     getById: (id) => `/api/adjustments/${id}`,
     getAll: "/api/adjustments",
-    delete: (id) => `/api/adjustments/${id}`,
+    delete: (id) => `/api/adjustments/cancel/${id}`,
+    exportExcel: "/api/adjustments/export/excel",
+    exportPdf: (id) => `/api/adjustments/${id}/export/pdf`,
   },
 };

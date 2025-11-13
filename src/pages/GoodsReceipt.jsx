@@ -154,15 +154,16 @@ export default function GoodsReceipt() {
   ];
 
   return (
-    <div style={{ padding: 20, background: "#fff" }}>
+    <>
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
-          marginBottom: 16,
         }}
       >
-        <h2>Quản lý phiếu nhập kho</h2>
+        <h2>
+          <b>NHẬP KHO</b>
+        </h2>
         <div style={{ display: "flex", gap: 8 }}>
           <Button icon={<DownloadOutlined />} onClick={handleExportExcel}>
             Xuất Excel
@@ -172,7 +173,7 @@ export default function GoodsReceipt() {
             icon={<PlusOutlined />}
             onClick={() => setModalVisible(true)}
           >
-            Thêm phiếu nhập
+            Thêm
           </Button>
         </div>
       </div>
@@ -181,7 +182,7 @@ export default function GoodsReceipt() {
         rowKey="id"
         dataSource={receipts}
         columns={columns}
-        pagination={{ pageSize: 5 }}
+        pagination={{ pageSize: 6 }}
         loading={loading}
       />
 
@@ -221,6 +222,6 @@ export default function GoodsReceipt() {
           <strong>{deleteRecord?.receiptCode}</strong> không?
         </p>
       </Modal>
-    </div>
+    </>
   );
 }
