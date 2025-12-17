@@ -340,6 +340,30 @@ export default function ProductModal({
               placeholder="Nhập mức tồn tối thiểu..."
             />
           </Form.Item>
+
+          <Form.Item
+            label="Ngưỡng chậm luân chuyển (Ngày)"
+            name="slowMovingThreshold"
+            tooltip="Số ngày tối đa lô hàng được phép tồn kho trước khi bị cảnh báo chậm luân chuyển."
+            rules={[
+              {
+                required: true,
+                message: "Vui lòng nhập ngưỡng ngày chậm luân chuyển",
+              },
+              {
+                type: "number",
+                min: 1,
+                message: "Ngưỡng phải là số ngày dương",
+              },
+            ]}
+          >
+            <InputNumber
+              min={1}
+              precision={0} // Chỉ cho phép số nguyên
+              style={{ width: "100%" }}
+              placeholder="Ví dụ: 90, 180, 365 ngày"
+            />
+          </Form.Item>
         </Form>
       </Modal>
 

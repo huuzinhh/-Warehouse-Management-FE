@@ -10,6 +10,7 @@ import {
   UserOutlined,
 } from "@ant-design/icons";
 import PartnerService from "../service/PartnerService";
+import TableFilter from "../components/TableFilter";
 
 export default function Customers() {
   const [customers, setCustomers] = useState([]);
@@ -19,6 +20,7 @@ export default function Customers() {
   const [isDeleteConfirmVisible, setIsDeleteConfirmVisible] = useState(false);
   const [deleteRecord, setDeleteRecord] = useState(null);
   const [form] = Form.useForm();
+  const [filteredCustomers, setFilteredCustomers] = useState([]);
 
   // 🔹 Lấy danh sách khách hàng
   const fetchCustomers = async () => {
@@ -36,6 +38,7 @@ export default function Customers() {
           isActive: item.active,
         }));
       setCustomers(customersData);
+      setFilteredCustomers(customersData);
     } catch (error) {
       console.error("Lỗi khi lấy danh sách khách hàng:", error);
       message.error("Không thể tải danh sách khách hàng");
@@ -123,6 +126,8 @@ export default function Customers() {
       title: "Tên khách hàng",
       dataIndex: "name",
       key: "name",
+      sorter: (a, b) => a.name.localeCompare(b.name),
+      defaultSortOrder: "ascend",
       render: (name) => (
         <span>
           <UserOutlined style={{ marginRight: 6, color: "#1677ff" }} />
@@ -198,6 +203,11 @@ export default function Customers() {
         <h2>
           <b>KHÁCH HÀNG</b>
         </h2>
+        <TableFilter
+          data={customers}
+          onFilter={setFilteredCustomers}
+          searchFields={["name", "email", "phone", "address"]}
+        />
         <Button
           type="primary"
           icon={<PlusOutlined />}
@@ -209,7 +219,7 @@ export default function Customers() {
 
       <Table
         rowKey="id"
-        dataSource={customers}
+        dataSource={filteredCustomers}
         columns={columns}
         pagination={{ pageSize: 6 }}
         loading={loading}

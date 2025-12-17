@@ -10,6 +10,7 @@ import GoodsReceiptService from "../service/GoodsReceiptService";
 import dayjs from "dayjs";
 import GoodsReceiptModal from "../components/GoodsReceiptModal";
 import GoodsReceiptViewModal from "../components/GoodsReceiptViewModal";
+import TableFilter from "../components/TableFilter";
 
 export default function GoodsReceipt() {
   const [receipts, setReceipts] = useState([]);
@@ -19,15 +20,22 @@ export default function GoodsReceipt() {
   const [viewVisible, setViewVisible] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState(null);
 
-  // ✅ State cho modal xác nhận xóa
+  //State cho modal xác nhận xóa
   const [isDeleteConfirmVisible, setIsDeleteConfirmVisible] = useState(false);
   const [deleteRecord, setDeleteRecord] = useState(null);
+
+  const [filteredGoodsReceipts, setFilteredGoodsReceipts] = useState([]);
 
   const fetchReceipts = async () => {
     try {
       setLoading(true);
       const data = await GoodsReceiptService.getAll();
-      setReceipts(data || []);
+      const sorted = (data || []).sort(
+        (a, b) => new Date(b.receiptDate) - new Date(a.receiptDate) // 🔥 mới → cũ
+      );
+
+      setReceipts(sorted);
+      setFilteredGoodsReceipts(sorted);
     } catch {
       // lỗi đã được toast trong axiosInstance
     } finally {
@@ -112,11 +120,13 @@ export default function GoodsReceipt() {
     {
       title: "Ngày nhập",
       dataIndex: "receiptDate",
+      sorter: (a, b) => new Date(a.receiptDate) - new Date(b.receiptDate),
       render: (d) => (d ? dayjs(d).format("DD/MM/YYYY HH:mm") : "-"),
     },
     {
       title: "Tổng tiền",
       dataIndex: "totalAmount",
+      sorter: (a, b) => a.totalAmount - b.totalAmount,
       render: (v) => (v ? v.toLocaleString() + " ₫" : "-"),
     },
     { title: "Nhà cung cấp", dataIndex: "partnerName" },
@@ -164,6 +174,19 @@ export default function GoodsReceipt() {
         <h2>
           <b>NHẬP KHO</b>
         </h2>
+        <TableFilter
+          data={receipts}
+          onFilter={setFilteredGoodsReceipts}
+          searchFields={["receiptCode", "partnerName", "createdByName"]}
+          dateFilters={[
+            {
+              field: "receiptDate",
+              placeholder: ["Từ ngày", "Đến ngày"],
+              mode: "range",
+            },
+          ]}
+        />
+
         <div style={{ display: "flex", gap: 8 }}>
           <Button icon={<DownloadOutlined />} onClick={handleExportExcel}>
             Xuất Excel
@@ -180,7 +203,7 @@ export default function GoodsReceipt() {
 
       <Table
         rowKey="id"
-        dataSource={receipts}
+        dataSource={filteredGoodsReceipts}
         columns={columns}
         pagination={{ pageSize: 6 }}
         loading={loading}

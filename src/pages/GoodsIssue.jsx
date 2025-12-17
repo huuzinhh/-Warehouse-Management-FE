@@ -10,6 +10,7 @@ import GoodsIssuseService from "../service/GoodsIssueService";
 import dayjs from "dayjs";
 import GoodsIssueModal from "../components/GoodsIssueModal";
 import GoodsIssueViewModal from "../components/GoodsIssueViewModal";
+import TableFilter from "../components/TableFilter";
 
 export default function GoodsIssue() {
   const [issues, setIssues] = useState([]);
@@ -23,12 +24,19 @@ export default function GoodsIssue() {
   const [isDeleteConfirmVisible, setIsDeleteConfirmVisible] = useState(false);
   const [deleteRecord, setDeleteRecord] = useState(null);
 
+  const [filteredGoodsIssues, setFilteredGoodsIssues] = useState([]);
+
   // 🔹 Lấy danh sách phiếu xuất
   const fetchIssues = async () => {
     try {
       setLoading(true);
       const data = await GoodsIssuseService.getAll();
-      setIssues(data || []);
+      const sorted = (data || []).sort(
+        (a, b) => new Date(b.issueDate) - new Date(a.issueDate) // mới → cũ
+      );
+
+      setIssues(sorted);
+      setFilteredGoodsIssues(sorted);
     } catch {
       // axiosInstance đã hiển thị lỗi
     } finally {
@@ -119,11 +127,13 @@ export default function GoodsIssue() {
     {
       title: "Ngày xuất",
       dataIndex: "issueDate",
+      sorter: (a, b) => new Date(a.issueDate) - new Date(b.issueDate),
       render: (d) => (d ? dayjs(d).format("DD/MM/YYYY HH:mm") : "-"),
     },
     {
       title: "Tổng tiền",
       dataIndex: "totalAmount",
+      sorter: (a, b) => a.totalAmount - b.totalAmount,
       render: (v) => (v ? v.toLocaleString() + " ₫" : "-"),
     },
     { title: "Khách hàng", dataIndex: "customerName" },
@@ -194,6 +204,18 @@ export default function GoodsIssue() {
         <h2>
           <b>XUẤT KHO</b>
         </h2>
+        <TableFilter
+          data={issues}
+          onFilter={setFilteredGoodsIssues}
+          searchFields={["issueCode", "partnerName", "createdByName"]}
+          dateFilters={[
+            {
+              field: "issueDate",
+              placeholder: ["Từ ngày", "Đến ngày"],
+              mode: "range",
+            },
+          ]}
+        />
         <div style={{ display: "flex", gap: 8 }}>
           <Button icon={<DownloadOutlined />} onClick={handleExportExcel}>
             Xuất Excel
@@ -210,7 +232,7 @@ export default function GoodsIssue() {
 
       <Table
         rowKey="id"
-        dataSource={issues}
+        dataSource={filteredGoodsIssues}
         columns={columns}
         pagination={{ pageSize: 6 }}
         loading={loading}

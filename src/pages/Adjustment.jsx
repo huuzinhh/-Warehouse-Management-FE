@@ -11,7 +11,7 @@ import AdjustmentService from "../service/AdjustmentService";
 import dayjs from "dayjs";
 import AdjustmentModal from "../components/AdjustmentModal";
 import AdjustmentViewModal from "../components/AdjustmentViewModal";
-import { getUserIdFromToken } from "../service/localStorageService";
+import TableFilter from "../components/TableFilter";
 
 export default function Adjusment() {
   const [adjustments, setAdjustments] = useState([]);
@@ -24,13 +24,26 @@ export default function Adjusment() {
   const [isDeleteConfirmVisible, setIsDeleteConfirmVisible] = useState(false);
   const [deleteRecord, setDeleteRecord] = useState(null);
 
+  const [filteredAdjustments, setFilteredAdjustments] = useState([]);
+
   // ===== Gọi API lấy danh sách phiếu kiểm kho =====
   const fetchAdjustments = async () => {
     setLoading(true);
     try {
       const res = await AdjustmentService.getAll();
-      console.log("res: ", res);
-      setAdjustments(res || []);
+      console.log(res);
+
+      // Lọc bỏ các phiếu có cancelled = true ngay sau khi lấy về
+      const activeAdjustments = (res || []).filter(
+        (item) => item.cancelled !== true
+      );
+
+      const sorted = activeAdjustments.sort(
+        (a, b) => new Date(b.adjustmentDate) - new Date(a.adjustmentDate) // mới → cũ
+      );
+
+      setAdjustments(sorted);
+      setFilteredAdjustments(sorted); // Cập nhật cả filteredAdjustments
     } catch (err) {
       console.error(err);
       message.error("Không thể tải danh sách phiếu kiểm kho!");
@@ -120,6 +133,8 @@ export default function Adjusment() {
       title: "Ngày tạo",
       dataIndex: "adjustmentDate",
       key: "adjustmentDate",
+      sorter: (a, b) => new Date(a.adjustmentDate) - new Date(b.adjustmentDate),
+
       render: (v) => dayjs(v).format("DD/MM/YYYY HH:mm"),
     },
     { title: "Người kiểm", dataIndex: "createdByName", key: "createdByName" },
@@ -161,6 +176,18 @@ export default function Adjusment() {
         <h2>
           <b>KIỂM KÊ KHO</b>
         </h2>
+        <TableFilter
+          data={adjustments}
+          onFilter={setFilteredAdjustments}
+          searchFields={["code", "createdByName"]}
+          dateFilters={[
+            {
+              field: "adjustmentDate",
+              placeholder: ["Từ ngày", "Đến ngày"],
+              mode: "range",
+            },
+          ]}
+        />
         <div style={{ display: "flex", gap: 8 }}>
           <Button icon={<DownloadOutlined />} onClick={handleExportExcel}>
             Xuất Excel
@@ -178,7 +205,7 @@ export default function Adjusment() {
       <Table
         rowKey="id"
         columns={columns}
-        dataSource={adjustments}
+        dataSource={filteredAdjustments}
         loading={loading}
         bordered
         pagination={{ pageSize: 6 }}

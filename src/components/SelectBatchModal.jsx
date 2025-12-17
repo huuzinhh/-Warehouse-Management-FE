@@ -239,6 +239,13 @@ export default function SelectBatchModal({
           selectedRowKeys: selectedRows,
         }}
         scroll={{ y: 350 }}
+        onRow={(record) => ({
+          style: {
+            // Màu đỏ nhạt nếu chậm luân chuyển, cam nhạt để gợi ý "nên xuất"
+            backgroundColor: record.slowMoving ? "#fff2e8" : "inherit",
+            cursor: "pointer",
+          },
+        })}
       />
 
       <Divider />

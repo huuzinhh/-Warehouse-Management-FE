@@ -17,6 +17,7 @@ import {
   AppstoreOutlined,
 } from "@ant-design/icons";
 import axiosInstance from "../service/axiosInstance";
+import TableFilter from "../components/TableFilter";
 
 const { Option } = Select;
 
@@ -28,6 +29,7 @@ export default function Shelves() {
   const [isDeleteConfirmVisible, setIsDeleteConfirmVisible] = useState(false);
   const [deleteRecord, setDeleteRecord] = useState(null);
   const [form] = Form.useForm();
+  const [filteredLocations, setFilteredLocations] = useState([]);
 
   const locationTypeMap = {
     KE_LON: "Kệ lớn",
@@ -61,6 +63,7 @@ export default function Shelves() {
           type: item.type,
         }));
         setShelves(shelvesData);
+        setFilteredLocations(shelvesData);
       } else {
         throw new Error("Dữ liệu không hợp lệ từ server");
       }
@@ -155,6 +158,8 @@ export default function Shelves() {
       title: "Tên vị trí",
       dataIndex: "name",
       key: "name",
+      sorter: (a, b) => a.name.localeCompare(b.name),
+      defaultSortOrder: "ascend",
       render: (name) => (
         <span>
           <AppstoreOutlined style={{ marginRight: 6, color: "#1677ff" }} />
@@ -208,6 +213,11 @@ export default function Shelves() {
         <h2>
           <b>VỊ TRÍ</b>
         </h2>
+        <TableFilter
+          data={shelves}
+          onFilter={setFilteredLocations}
+          searchFields={["name", "type"]}
+        />
         <Button
           type="primary"
           icon={<PlusOutlined />}
@@ -219,7 +229,7 @@ export default function Shelves() {
 
       <Table
         rowKey="id"
-        dataSource={shelves}
+        dataSource={filteredLocations}
         columns={columns}
         pagination={{ pageSize: 6 }}
         loading={loading}

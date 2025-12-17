@@ -4,6 +4,7 @@ import { Table, Button, Space, Switch, Tag, Modal, message } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import CategoryService from "../service/CategoryService";
 import CategoryModal from "../components/CategoryModal";
+import TableFilter from "../components/TableFilter";
 
 export default function Categories() {
   const [categories, setCategories] = useState([]);
@@ -14,12 +15,15 @@ export default function Categories() {
   const [deleteRecord, setDeleteRecord] = useState(null);
   const [modalLoading, setModalLoading] = useState(false);
 
+  const [filteredCategories, setfilteredCategories] = useState([]);
+
   // Fetch categories với useCallback
   const fetchCategories = useCallback(async () => {
     try {
       setLoading(true);
       const data = await CategoryService.getAll();
       setCategories(data);
+      setfilteredCategories(data);
     } catch (error) {
       console.error("Lỗi khi lấy danh mục:", error);
       message.error("Không thể tải danh mục");
@@ -92,6 +96,8 @@ export default function Categories() {
       title: "Tên danh mục",
       dataIndex: "name",
       key: "name",
+      sorter: (a, b) => a.name.localeCompare(b.name),
+      defaultSortOrder: "ascend",
     },
     {
       title: "Trạng thái hiển thị",
@@ -152,6 +158,21 @@ export default function Categories() {
         <h2>
           <b>DANH MỤC SẢN PHẨM</b>
         </h2>
+        <TableFilter
+          data={categories}
+          onFilter={setfilteredCategories}
+          searchFields={["name"]}
+          selectFilters={[
+            {
+              field: "active",
+              placeholder: "Trạng thái",
+              options: [
+                { label: "Hoạt động", value: true },
+                { label: "Ngưng hoạt động", value: false },
+              ],
+            },
+          ]}
+        />
         <Button
           type="primary"
           icon={<PlusOutlined />}
@@ -163,7 +184,7 @@ export default function Categories() {
 
       <Table
         rowKey="id"
-        dataSource={categories}
+        dataSource={filteredCategories}
         columns={columns}
         pagination={{ pageSize: 6 }}
         loading={loading}

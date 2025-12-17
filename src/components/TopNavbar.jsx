@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Layout, Input, Avatar, Menu, Dropdown } from "antd";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
@@ -21,12 +21,15 @@ import {
   InsertRowBelowOutlined,
 } from "@ant-design/icons";
 import AuthService from "../service/AuthenticationService";
+import { getUserIdFromToken } from "../service/localStorageService";
+import UserService from "../service/UserService";
 
 const { Header } = Layout;
 
 export default function TopNavbar() {
   const location = useLocation();
   const navigate = useNavigate();
+  const [user, setUser] = useState();
 
   const selectedKey =
     location.pathname === "/" ? "home" : location.pathname.replace("/", "");
@@ -39,6 +42,17 @@ export default function TopNavbar() {
   const handleLogin = () => {
     navigate("/");
   };
+
+  const fetchUser = async () => {
+    const data = await UserService.getById(getUserIdFromToken());
+    console.log("user data: ", data);
+
+    setUser(data);
+  };
+
+  useEffect(() => {
+    fetchUser();
+  }, []);
 
   // Menu chính (ở giữa thanh navbar)
   const mainMenuItems = [
@@ -204,7 +218,9 @@ export default function TopNavbar() {
             style={{ backgroundColor: "#1677ff" }}
             icon={<UserOutlined />}
           />
-          <span style={{ fontWeight: 500 }}>Admin</span>
+          <span style={{ fontWeight: 500 }}>
+            {user?.fullName || "Người dùng"}
+          </span>
         </div>
       </Dropdown>
     </Header>

@@ -15,9 +15,13 @@ const CategoryModal = ({
   useEffect(() => {
     if (open) {
       if (editingCategory) {
-        form.setFieldsValue({
-          name: editingCategory.name,
-        });
+        console.log("edit category: ", editingCategory);
+
+        setTimeout(() => {
+          form.setFieldsValue({
+            name: editingCategory.name,
+          });
+        }, 0);
       } else {
         form.resetFields();
       }

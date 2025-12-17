@@ -3,6 +3,7 @@ import { Table, Button, Space, Tag, Modal, Switch } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import UserService from "../service/UserService";
 import UserModal from "../components/UserModal";
+import TableFilter from "../components/TableFilter";
 import dayjs from "dayjs";
 
 export default function Users() {
@@ -17,12 +18,16 @@ export default function Users() {
   const [isDeleteConfirmVisible, setIsDeleteConfirmVisible] = useState(false);
   const [deleteRecord, setDeleteRecord] = useState(null);
 
+  const [filteredUsers, setFilteredUsers] = useState([]);
+
   // 🔹 Lấy danh sách người dùng
   const fetchUsers = async () => {
     try {
       setLoading(true);
       const data = await UserService.getAll();
       setUsers(data || []);
+
+      setFilteredUsers(data || []); // khởi tạo filteredUsers
     } catch (error) {
       console.error("Fetch users failed:", error);
     } finally {
@@ -69,7 +74,12 @@ export default function Users() {
 
   const columns = [
     { title: "Tên đăng nhập", dataIndex: "username" },
-    { title: "Họ tên", dataIndex: "fullName" },
+    {
+      title: "Họ tên",
+      dataIndex: "fullName",
+      sorter: (a, b) => a.fullName.localeCompare(b.fullName),
+      defaultSortOrder: "ascend",
+    },
     {
       title: "Giới tính",
       dataIndex: "gender",
@@ -143,6 +153,21 @@ export default function Users() {
         <h2>
           <b>NGƯỜI DÙNG</b>
         </h2>
+        <TableFilter
+          data={users}
+          onFilter={setFilteredUsers}
+          searchFields={["username", "fullName", "email", "phone"]}
+          selectFilters={[
+            {
+              field: "enabled",
+              placeholder: "Trạng thái",
+              options: [
+                { label: "Hoạt động", value: true },
+                { label: "Đình chỉ", value: false },
+              ],
+            },
+          ]}
+        />
         <Button
           type="primary"
           icon={<PlusOutlined />}
@@ -158,7 +183,7 @@ export default function Users() {
 
       <Table
         rowKey="id"
-        dataSource={users}
+        dataSource={filteredUsers}
         columns={columns}
         loading={loading}
         pagination={{ pageSize: 6 }}

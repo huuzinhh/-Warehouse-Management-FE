@@ -3,6 +3,7 @@ import { Table, Button, Space, Tag, Modal, Switch } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import ProductService from "../service/ProductService";
 import ProductModal from "../components/ProductModal";
+import TableFilter from "../components/TableFilter";
 
 export default function Products() {
   const [products, setProducts] = useState([]);
@@ -16,6 +17,8 @@ export default function Products() {
   // state quản lý modal xóa
   const [isDeleteConfirmVisible, setIsDeleteConfirmVisible] = useState(false);
   const [deleteRecord, setDeleteRecord] = useState(null);
+
+  const [filteredProducts, setFilteredProducts] = useState([]);
 
   // 🔹 Lấy danh sách sản phẩm
   const fetchProducts = async () => {
@@ -42,6 +45,7 @@ export default function Products() {
       }));
 
       setProducts(mergedData);
+      setFilteredProducts(mergedData);
     } catch (error) {
       console.error("Fetch products or stock failed:", error);
     } finally {
@@ -90,25 +94,43 @@ export default function Products() {
   };
 
   const columns = [
-    { title: "Mã SKU", dataIndex: "sku", width: 100 },
-    { title: "Tên sản phẩm", dataIndex: "name" },
-    { title: "Danh mục", dataIndex: "categoryName" },
+    {
+      title: "Mã SKU",
+      dataIndex: "sku",
+      width: 100,
+      sorter: (a, b) => a.sku.localeCompare(b.sku),
+    },
+    {
+      title: "Tên sản phẩm",
+      dataIndex: "name",
+      width: 250,
+      sorter: (a, b) => a.name.localeCompare(b.name),
+      defaultSortOrder: "ascend",
+    },
+    { title: "Danh mục", dataIndex: "categoryName", width: 150 },
     { title: "Đơn vị", dataIndex: "baseUnit", width: 100 },
     { title: "Mức tồn", dataIndex: "minStockLevel", width: 100 },
     {
       title: "Tồn kho",
       dataIndex: "stock",
+      sorter: (a, b) => a.stock - b.stock,
       render: (stock, record) =>
         stock < record.minStockLevel ? (
           <Tag color="red">{stock}</Tag>
         ) : (
           <Tag color="green">{stock}</Tag>
         ),
+      width: 100,
+    },
+    {
+      title: "Ngưỡng luân chuyển (ngày)",
+      dataIndex: "slowMovingThreshold",
+      width: 150,
     },
     {
       title: "Trạng thái",
       dataIndex: "active",
-      width: 120,
+      width: 80,
       render: (active, record) => (
         <Switch
           checked={active}
@@ -121,6 +143,7 @@ export default function Products() {
     {
       title: "Hành động",
       key: "action",
+      width: 200,
       render: (_, record) => (
         <Space>
           <Button
@@ -158,6 +181,21 @@ export default function Products() {
         <h2>
           <b>SẢN PHẨM</b>
         </h2>
+        <TableFilter
+          data={products}
+          onFilter={setFilteredProducts}
+          searchFields={["sku", "name", "categoryName"]}
+          selectFilters={[
+            {
+              field: "active",
+              placeholder: "Trạng thái",
+              options: [
+                { label: "Hoạt động", value: true },
+                { label: "Ngưng hoạt động", value: false },
+              ],
+            },
+          ]}
+        />
         <Button
           type="primary"
           icon={<PlusOutlined />}
@@ -173,7 +211,7 @@ export default function Products() {
 
       <Table
         rowKey="id"
-        dataSource={products}
+        dataSource={filteredProducts}
         columns={columns}
         loading={loading}
         pagination={{ pageSize: 6 }}
@@ -215,6 +253,7 @@ export default function Products() {
               baseUnit: values.baseUnit,
               minStockLevel: values.minStockLevel,
               categoryId: values.categoryId,
+              slowMovingThreshold: values.slowMovingThreshold,
               conversions:
                 values.conversions?.map((c) => ({
                   unitName: c.unitName,

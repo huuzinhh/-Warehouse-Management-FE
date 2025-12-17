@@ -20,6 +20,7 @@ import {
   HomeOutlined,
 } from "@ant-design/icons";
 import PartnerService from "../service/PartnerService";
+import TableFilter from "../components/TableFilter";
 
 export default function Suppliers() {
   const [suppliers, setSuppliers] = useState([]);
@@ -29,6 +30,7 @@ export default function Suppliers() {
   const [isDeleteConfirmVisible, setIsDeleteConfirmVisible] = useState(false);
   const [deleteRecord, setDeleteRecord] = useState(null);
   const [form] = Form.useForm();
+  const [filteredSuppliers, setFilteredSuppliers] = useState([]);
 
   // 🔹 Lấy danh sách nhà cung cấp
   const fetchSuppliers = async () => {
@@ -46,6 +48,7 @@ export default function Suppliers() {
           isActive: item.active,
         }));
       setSuppliers(suppliersData);
+      setFilteredSuppliers(suppliersData);
     } catch (error) {
       console.error("Lỗi khi lấy danh sách nhà cung cấp:", error);
       message.error("Không thể tải danh sách nhà cung cấp");
@@ -138,6 +141,8 @@ export default function Suppliers() {
       title: "Tên nhà cung cấp",
       dataIndex: "name",
       key: "name",
+      sorter: (a, b) => a.name.localeCompare(b.name),
+      defaultSortOrder: "ascend",
       render: (name) => (
         <span>
           <UserOutlined style={{ marginRight: 6, color: "#1677ff" }} />
@@ -214,6 +219,11 @@ export default function Suppliers() {
         <h2>
           <b>NHÀ CUNG CẤP</b>
         </h2>
+        <TableFilter
+          data={suppliers}
+          onFilter={setFilteredSuppliers}
+          searchFields={["name", "email", "phone", "address"]}
+        />
         <Button
           type="primary"
           icon={<PlusOutlined />}
@@ -225,7 +235,7 @@ export default function Suppliers() {
 
       <Table
         rowKey="id"
-        dataSource={suppliers}
+        dataSource={filteredSuppliers}
         columns={columns}
         pagination={{ pageSize: 6 }}
         loading={loading}
