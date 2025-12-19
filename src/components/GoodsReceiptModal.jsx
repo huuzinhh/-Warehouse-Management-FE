@@ -23,6 +23,7 @@ import dayjs from "dayjs";
 import ProductService from "../service/ProductService";
 import PartnerService from "../service/PartnerService";
 import LocationService from "../service/LocationService";
+import ToastService from "../service/ToastService";
 import ProductModal from "./ProductModal";
 import { getUserIdFromToken } from "../service/localStorageService";
 
@@ -36,6 +37,13 @@ export default function GoodsReceiptModal({ open, onCancel, onOk, loading }) {
   const [locations, setLocations] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [productModalOpen, setProductModalOpen] = useState(false);
+  const [unitSelectionModalOpen, setUnitSelectionModalOpen] = useState(false);
+  const [selectedProductForUnit, setSelectedProductForUnit] = useState(null);
+  const [tempSelection, setTempSelection] = useState({
+    unit: null,
+    quantity: 1,
+    unitPrice: 0,
+  });
 
   useEffect(() => {
     if (open) {
@@ -89,13 +97,17 @@ export default function GoodsReceiptModal({ open, onCancel, onOk, loading }) {
     if (!product) return [];
 
     const units = [];
+    const baseConversion = product.conversions?.find(
+      (c) => c.ratioToBase === 1
+    );
 
     if (product.baseUnit) {
       units.push({
         unitName: product.baseUnit,
         ratioToBase: 1,
         isBaseUnit: true,
-        conversionId: product.conversions?.find((c) => c.ratioToBase === 1)?.id,
+        conversionId: baseConversion?.id,
+        allowDecimal: baseConversion?.allowDecimal,
       });
     }
 
@@ -107,6 +119,7 @@ export default function GoodsReceiptModal({ open, onCancel, onOk, loading }) {
             ratioToBase: conversion.ratioToBase,
             isBaseUnit: false,
             conversionId: conversion.id,
+            allowDecimal: conversion.allowDecimal,
           });
         }
       });
@@ -118,31 +131,66 @@ export default function GoodsReceiptModal({ open, onCancel, onOk, loading }) {
   const handleSelectProduct = (value, option) => {
     const selectedProduct = option.product;
     const productUnits = getProductUnits(selectedProduct);
+    const defaultUnit = productUnits[0];
 
-    const existingProduct = productList.find(
-      (p) => p.productId === selectedProduct.id
-    );
-    if (existingProduct) {
-      message.warning("Sản phẩm đã có trong danh sách");
-      return;
-    }
-
-    const newProduct = {
-      key: Date.now(),
-      productId: selectedProduct.id,
-      productName: selectedProduct.name,
-      sku: selectedProduct.sku,
-      quantity: 1,
+    setSelectedProductForUnit(selectedProduct);
+    setTempSelection({
+      unit: defaultUnit,
+      quantity: 1, // Số lượng mặc định hiển thị trong Modal
       unitPrice: 0,
-      selectedUnit: productUnits[0]?.unitName || selectedProduct.baseUnit,
-      selectedUnitConversionId: productUnits[0]?.conversionId,
-      selectedLocationId: locations[0]?.id,
-      baseUnit: selectedProduct.baseUnit,
-      availableUnits: productUnits,
-    };
+    });
 
-    setProductList([...productList, newProduct]);
+    setUnitSelectionModalOpen(true);
     setSearchTerm("");
+  };
+
+  const confirmAddProduct = () => {
+    const { unit, quantity, unitPrice } = tempSelection;
+    const product = selectedProductForUnit;
+
+    setProductList((prev) => {
+      // 1. Kiểm tra trùng
+      const existingIndex = prev.findIndex(
+        (item) =>
+          item.productId === product.id && item.selectedUnit === unit.unitName
+      );
+
+      if (existingIndex !== -1) {
+        // TRÙNG: Phải dùng .map hoặc tạo object mới hoàn toàn tại vị trí đó
+        const newList = [...prev];
+
+        // SỬA LẠI ĐOẠN NÀY:
+        newList[existingIndex] = {
+          ...newList[existingIndex], // Copy toàn bộ thuộc tính cũ
+          quantity: newList[existingIndex].quantity + quantity, // Ghi đè số lượng mới
+        };
+
+        message.success(
+          `Đã cộng dồn ${quantity} ${unit.unitName} vào dòng hiện có`
+        );
+        return newList;
+      } else {
+        // KHÔNG TRÙNG: Thêm dòng mới (đoạn này của bạn đã đúng)
+        const newEntry = {
+          key: `${product.id}_${unit.conversionId}_${Date.now()}`,
+          productId: product.id,
+          productName: product.name,
+          sku: product.sku,
+          quantity: quantity,
+          unitPrice: unitPrice,
+          selectedUnit: unit.unitName,
+          selectedUnitConversionId: unit.conversionId,
+          allowDecimal: unit.allowDecimal,
+          selectedLocationId: locations[0]?.id,
+          baseUnit: product.baseUnit,
+          availableUnits: getProductUnits(product),
+        };
+        message.success(`Đã thêm mới dòng: ${product.name} (${unit.unitName})`);
+        return [...prev, newEntry];
+      }
+    });
+
+    setUnitSelectionModalOpen(false);
   };
 
   const handleQuantityChange = (key, value) => {
@@ -167,19 +215,41 @@ export default function GoodsReceiptModal({ open, onCancel, onOk, loading }) {
     );
   };
 
-  const handleUnitChange = (key, value, option) => {
-    const product = productList.find((item) => item.key === key);
-    const selectedUnit = product.availableUnits?.find(
-      (unit) => unit.unitName === value
+  const handleUnitChange = (key, newUnitName) => {
+    // 1. Lấy thông tin dòng đang chỉnh sửa
+    const currentItem = productList.find((item) => item.key === key);
+    if (!currentItem) return;
+
+    // 2. Kiểm tra trùng: Tìm xem có dòng nào KHÁC (khác key) mà cùng Product và cùng Unit mới chọn không
+    const isDuplicate = productList.some(
+      (item) =>
+        item.key !== key && // Không phải dòng hiện tại
+        item.productId === currentItem.productId && // Cùng sản phẩm
+        item.selectedUnit === newUnitName // Cùng đơn vị muốn đổi sang
     );
 
+    // 3. Nếu trùng => Bắn Toast thông báo và dừng lại (không cho đổi)
+    if (isDuplicate) {
+      ToastService.warning(
+        `Đơn vị "${newUnitName}" đã tồn tại cho sản phẩm này. Vui lòng chọn đơn vị khác.`
+      );
+      return;
+    }
+
+    // 4. Nếu không trùng => Tìm thông tin chi tiết của đơn vị mới (để lấy conversionId, allowDecimal)
+    const selectedUnitData = currentItem.availableUnits?.find(
+      (unit) => unit.unitName === newUnitName
+    );
+
+    // 5. Cập nhật State (Immutable way)
     setProductList((prev) =>
       prev.map((item) =>
         item.key === key
           ? {
-              ...item,
-              selectedUnit: value,
-              selectedUnitConversionId: selectedUnit?.conversionId,
+              ...item, // Giữ lại các thuộc tính cũ (productId, quantity, unitPrice...)
+              selectedUnit: newUnitName,
+              selectedUnitConversionId: selectedUnitData?.conversionId,
+              allowDecimal: selectedUnitData?.allowDecimal,
             }
           : item
       )
@@ -202,22 +272,15 @@ export default function GoodsReceiptModal({ open, onCancel, onOk, loading }) {
     fetchProducts();
     setProductModalOpen(false);
 
+    // Mở modal chọn đơn vị cho sản phẩm vừa tạo mới
     const productUnits = getProductUnits(newProduct);
-    const productToAdd = {
-      key: Date.now(),
-      productId: newProduct.id,
-      productName: newProduct.name,
-      sku: newProduct.sku,
+    setSelectedProductForUnit(newProduct);
+    setTempSelection({
+      unit: productUnits[0],
       quantity: 1,
       unitPrice: 0,
-      selectedUnit: productUnits[0]?.unitName || newProduct.baseUnit,
-      selectedUnitConversionId: productUnits[0]?.conversionId,
-      selectedLocationId: locations[0]?.id,
-      baseUnit: newProduct.baseUnit,
-      availableUnits: productUnits,
-    };
-
-    setProductList((prev) => [...prev, productToAdd]);
+    });
+    setUnitSelectionModalOpen(true);
   };
 
   // Columns hiển thị sản phẩm trong phiếu nhập - không cố định width để tự động co giãn
@@ -275,17 +338,22 @@ export default function GoodsReceiptModal({ open, onCancel, onOk, loading }) {
       title: "Số lượng",
       dataIndex: "quantity",
       key: "quantity",
-      render: (quantity, record) => (
-        <InputNumber
-          value={quantity}
-          min={0.001}
-          step={1}
-          onChange={(value) => handleQuantityChange(record.key, value)}
-          style={{ width: "100%", minWidth: "80px" }}
-          precision={3}
-          size="middle"
-        />
-      ),
+      render: (quantity, record) => {
+        const canDecimal = record.allowDecimal; // Lấy từ record
+        console.log("canDecimal in goods receipt modal: ", canDecimal);
+        return (
+          <InputNumber
+            value={quantity}
+            min={canDecimal ? 0.001 : 1}
+            step={canDecimal ? 0.1 : 1}
+            precision={canDecimal ? 3 : 0} // Nếu không cho lẻ thì precision = 0
+            onChange={(value) => handleQuantityChange(record.key, value)}
+            style={{ width: "100%", minWidth: "80px" }}
+            placeholder={canDecimal ? "0.000" : "0"}
+            size="middle"
+          />
+        );
+      },
     },
     {
       title: "Đơn giá",
@@ -496,27 +564,6 @@ export default function GoodsReceiptModal({ open, onCancel, onOk, loading }) {
                     Tổng tiền được tính tự động
                   </div>
                 </Form.Item>
-
-                {/* <Form.Item
-                  label="Đã thanh toán"
-                  name="paidAmount"
-                  rules={[
-                    { required: true, message: "Vui lòng nhập số tiền đã trả" },
-                  ]}
-                >
-                  <InputNumber
-                    min={0}
-                    max={totalAmount}
-                    style={{ width: "100%" }}
-                    size="middle"
-                    formatter={(v) =>
-                      `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-                    }
-                    parser={(v) => v.replace(/,/g, "")}
-                    placeholder="Nhập số tiền đã thanh toán"
-                    addonAfter="₫"
-                  />
-                </Form.Item> */}
               </Form>
             </Card>
           </Col>
@@ -636,6 +683,88 @@ export default function GoodsReceiptModal({ open, onCancel, onOk, loading }) {
           }
         }}
       />
+
+      {/* Modal phụ chọn đơn vị và số lượng nhanh */}
+      <Modal
+        title={`Nhập sản phẩm: ${selectedProductForUnit?.name}`}
+        open={unitSelectionModalOpen}
+        onOk={confirmAddProduct}
+        onCancel={() => setUnitSelectionModalOpen(false)}
+        okText="Xác nhận thêm"
+        cancelText="Hủy"
+        width={450}
+        destroyOnClose
+      >
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "20px",
+            padding: "10px 0",
+          }}
+        >
+          {/* Chọn đơn vị */}
+          <div>
+            <div style={{ marginBottom: 8 }}>
+              <strong>Chọn đơn vị nhập:</strong>
+            </div>
+            <Select
+              style={{ width: "100%" }}
+              value={tempSelection.unit?.unitName}
+              onChange={(val) => {
+                const unit = getProductUnits(selectedProductForUnit).find(
+                  (u) => u.unitName === val
+                );
+                setTempSelection((prev) => ({ ...prev, unit }));
+              }}
+            >
+              {getProductUnits(selectedProductForUnit).map((u) => (
+                <Option key={u.unitName} value={u.unitName}>
+                  {u.unitName}{" "}
+                  {u.isBaseUnit
+                    ? "(Đơn vị gốc)"
+                    : `(Quy đổi: ${u.ratioToBase})`}
+                </Option>
+              ))}
+            </Select>
+          </div>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <div style={{ marginBottom: 8 }}>
+                <strong>Số lượng:</strong>
+              </div>
+              <InputNumber
+                style={{ width: "100%" }}
+                min={tempSelection.unit?.allowDecimal ? 0.001 : 1}
+                precision={tempSelection.unit?.allowDecimal ? 3 : 0}
+                value={tempSelection.quantity}
+                onChange={(val) =>
+                  setTempSelection((prev) => ({ ...prev, quantity: val }))
+                }
+              />
+            </Col>
+            <Col span={12}>
+              <div style={{ marginBottom: 8 }}>
+                <strong>Đơn giá nhập:</strong>
+              </div>
+              <InputNumber
+                style={{ width: "100%" }}
+                min={0}
+                value={tempSelection.unitPrice}
+                formatter={(value) =>
+                  `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                }
+                parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
+                onChange={(val) =>
+                  setTempSelection((prev) => ({ ...prev, unitPrice: val }))
+                }
+                addonAfter="₫"
+              />
+            </Col>
+          </Row>
+        </div>
+      </Modal>
     </>
   );
 }

@@ -256,6 +256,7 @@ export default function Products() {
               slowMovingThreshold: values.slowMovingThreshold,
               conversions:
                 values.conversions?.map((c) => ({
+                  id: c.id,
                   unitName: c.unitName,
                   ratioToBase: c.ratioToBase,
                 })) || [],

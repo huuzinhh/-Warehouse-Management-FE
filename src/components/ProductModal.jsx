@@ -51,9 +51,13 @@ export default function ProductModal({
       if (mode === "edit" && initialValues) {
         // Lọc các conversion có ratioToBase khác 1
         const conversions = initialValues.conversions || [];
-        const filtered = conversions.filter(
-          (conversion) => conversion.ratioToBase !== 1
-        );
+        const filtered = conversions
+          .filter((c) => c.ratioToBase !== 1)
+          .map((c) => ({
+            id: c.id, // Đảm bảo ID được truyền vào Form
+            unitName: c.unitName,
+            ratioToBase: c.ratioToBase,
+          }));
 
         // Set filtered conversions và các giá trị khác
         form.setFieldsValue({
@@ -124,14 +128,8 @@ export default function ProductModal({
     try {
       const values = await form.validateFields();
 
-      // Trong mode edit, đảm bảo chỉ gửi các conversion có ratioToBase khác 1
-      if (mode === "edit") {
-        const conversions = values.conversions || [];
-        const filteredConversions = conversions.filter(
-          (conversion) => conversion.ratioToBase !== 1
-        );
-        values.conversions = filteredConversions;
-      }
+      // ⚠️ KHÔNG filter, KHÔNG map lại
+      values.conversions = values.conversions || [];
 
       onOk(values, form);
     } catch (error) {
@@ -246,7 +244,7 @@ export default function ProductModal({
                   </label>
                 )}
                 {fields.map(({ key, name, ...restField }) => {
-                  // Trong mode edit, ẩn các đơn vị có ratioToBase = 1
+                  // Trong mode edit, ẩn các đơn vị có ratioToBase = 1 (đơn vị cơ bản nằm trong conversions)
                   if (mode === "edit") {
                     const conversionValue = form.getFieldValue([
                       "conversions",
@@ -264,6 +262,12 @@ export default function ProductModal({
                       style={{ marginBottom: 8 }}
                       align="middle"
                     >
+                      {/* --- QUAN TRỌNG: Thêm trường id ẩn để Backend định danh --- */}
+                      <Form.Item {...restField} name={[name, "id"]} hidden>
+                        <Input />
+                      </Form.Item>
+                      {/* ------------------------------------------------------- */}
+
                       <Col flex="3 1 200px">
                         <Form.Item
                           {...restField}
@@ -305,7 +309,7 @@ export default function ProductModal({
                         >
                           <InputNumber
                             min={0}
-                            placeholder="Tỉ lệ so với đơn vị cơ bản"
+                            placeholder="Tỉ lệ so với cơ bản"
                             style={{ width: "100%" }}
                           />
                         </Form.Item>

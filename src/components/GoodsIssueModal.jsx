@@ -139,17 +139,27 @@ export default function GoodsIssueModal({ open, onCancel, onOk, loading }) {
       title: "SL xuất",
       dataIndex: "quantity",
       key: "quantity",
-      render: (quantity, record) => (
-        <InputNumber
-          value={quantity}
-          min={0.01}
-          max={record.maxQuantity}
-          onChange={(value) => handleQuantityChange(record.id, value)}
-          style={{ width: "100%" }}
-          step={0.01}
-          precision={2}
-        />
-      ),
+      render: (quantity, record) => {
+        // Kiểm tra đơn vị của dòng này có cho phép lẻ không
+        // Lưu ý: Đảm bảo record đã có trường allowDecimal từ SelectBatchModal truyền sang
+        const canDecimal = record.allowDecimal;
+
+        return (
+          <InputNumber
+            value={quantity}
+            // Nếu không cho lẻ, min là 1 và bước nhảy là 1
+            min={canDecimal ? 0.01 : 1}
+            step={canDecimal ? 0.01 : 1}
+            // Nếu không cho lẻ, không cho phép nhập số sau dấu phẩy
+            precision={canDecimal ? 2 : 0}
+            max={record.maxQuantity}
+            onChange={(value) => handleQuantityChange(record.id, value)}
+            style={{ width: "100%" }}
+            // Hiển thị gợi ý định dạng cho người dùng
+            placeholder={canDecimal ? "0.00" : "0"}
+          />
+        );
+      },
     },
     {
       title: "Thành tiền (VNĐ)",

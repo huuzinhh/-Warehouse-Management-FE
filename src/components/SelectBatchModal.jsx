@@ -100,6 +100,7 @@ export default function SelectBatchModal({
             inventoryBatchId: b.id,
             unitConversionId: b.selectedUnit.id,
             unitName: b.selectedUnit.unitName,
+            allowDecimal: b.selectedUnit.allowDecimal,
             ratioToBase: b.selectedUnit.ratioToBase,
             quantity: b.quantity,
             remainingQuantity: b.remainingQuantity,
@@ -192,17 +193,26 @@ export default function SelectBatchModal({
     {
       title: "Số lượng",
       dataIndex: "quantity",
-      render: (_, record) => (
-        <InputNumber
-          min={0.01}
-          step={0.01}
-          precision={2}
-          value={record.quantity}
-          max={getMaxQuantity(record)}
-          onChange={(v) => handleQuantityChange(record.id, v)}
-          style={{ width: 110 }}
-        />
-      ),
+      render: (_, record) => {
+        // Kiểm tra xem đơn vị hiện tại có cho phép số lẻ không
+        const canDecimal = record.selectedUnit?.allowDecimal;
+        console.log("canDecimal in selected batch modal: ", canDecimal);
+
+        return (
+          <InputNumber
+            min={canDecimal ? 0.01 : 1} // Nếu không cho lẻ, min phải là 1
+            // Nếu không cho lẻ, step = 1 (chặn tăng giảm lẻ), ngược lại 0.01
+            step={canDecimal ? 0.01 : 1}
+            // Nếu không cho lẻ, precision = 0 (không cho nhập dấu chấm), ngược lại 2
+            precision={canDecimal ? 2 : 0}
+            value={record.quantity}
+            max={getMaxQuantity(record)}
+            onChange={(v) => handleQuantityChange(record.id, v)}
+            style={{ width: 110 }}
+            placeholder={canDecimal ? "0.00" : "0"}
+          />
+        );
+      },
     },
     {
       title: "Tối đa",

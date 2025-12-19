@@ -216,24 +216,60 @@ const FloatingChat = () => {
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
                         components={{
-                          // Tùy chỉnh CSS cho các thẻ HTML bên trong Markdown
+                          // Tùy chỉnh đoạn văn
                           p: ({ node, ...props }) => (
                             <p
-                              style={{ margin: 0, marginBottom: 8 }}
+                              style={{ margin: "4px 0", lineHeight: "1.6" }}
                               {...props}
                             />
                           ),
+                          // Biến dấu --- thành đường kẻ mảnh tinh tế
+                          hr: () => (
+                            <hr
+                              style={{
+                                border: "0",
+                                borderTop: "1px solid #f0f0f0",
+                                margin: "10px 0",
+                              }}
+                            />
+                          ),
+                          // Tối ưu danh sách
                           ul: ({ node, ...props }) => (
                             <ul
-                              style={{ paddingLeft: 20, margin: 0 }}
+                              style={{
+                                paddingLeft: 18,
+                                margin: "8px 0",
+                                listStyleType: "none",
+                              }}
                               {...props}
                             />
                           ),
                           li: ({ node, ...props }) => (
-                            <li style={{ marginBottom: 4 }} {...props} />
+                            <li
+                              style={{ marginBottom: 8, position: "relative" }}
+                              {...props}
+                            />
                           ),
+                          // Làm nổi bật các con số trong thẻ code ``
+                          code: ({ node, ...props }) => (
+                            <code
+                              style={{
+                                background: "#f0f5ff",
+                                padding: "2px 5px",
+                                borderRadius: 4,
+                                color: "#0050b3",
+                                fontFamily: "monospace",
+                                fontWeight: "600",
+                              }}
+                              {...props}
+                            />
+                          ),
+                          // Tùy chỉnh chữ đậm
                           strong: ({ node, ...props }) => (
-                            <strong style={{ color: "#1677ff" }} {...props} />
+                            <strong
+                              style={{ color: "#262626", fontWeight: "700" }}
+                              {...props}
+                            />
                           ),
                         }}
                       >
