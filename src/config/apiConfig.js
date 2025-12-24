@@ -15,7 +15,7 @@ export const API_ENDPOINTS = {
     getAll: "/api/users",
     delete: (id) => `/api/users/${id}`,
     changeStatus: (id) => `/api/users/toggle/${id}`,
-    changePassword: "/api/users/change-password",
+    changePassword: (id) => `/api/users/change-password/${id}`,
   },
 
   product: {

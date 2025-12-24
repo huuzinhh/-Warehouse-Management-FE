@@ -78,7 +78,8 @@ const UserService = {
         API_ENDPOINTS.user.changePassword(id),
         request
       );
-      return response.result;
+      console.log("Change password response:", response);
+      return response;
     } catch (error) {
       console.error("Change User password error:", error);
       throw error;

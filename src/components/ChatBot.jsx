@@ -7,7 +7,6 @@ import {
 } from "@ant-design/icons";
 import { getUserIdFromToken } from "../service/localStorageService";
 
-// 1️⃣ IMPORT THƯ VIỆN MARKDOWN
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -16,7 +15,6 @@ const FloatingChat = () => {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [hasRestored, setHasRestored] = useState(false);
 
   const chatContainerRef = useRef(null);
   const userId = getUserIdFromToken();
@@ -26,36 +24,13 @@ const FloatingChat = () => {
     return null;
   }
 
+  // --- THAY ĐỔI QUAN TRỌNG: Cố định Session ID theo User ID ---
+  // Khi dùng chung một ID cho mỗi lần gọi Webhook, n8n Memory sẽ tự tìm được lịch sử cũ
   const getSessionId = () => {
-    let id = localStorage.getItem("sessionId");
-    if (!id) {
-      id = "user_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
-      localStorage.setItem("sessionId", id);
-    }
-    return id;
+    return `session_user_${userId}`;
   };
 
-  useEffect(() => {
-    const saved = localStorage.getItem("chatMessages");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setMessages(parsed);
-        }
-      } catch (e) {
-        localStorage.removeItem("chatMessages");
-      }
-    }
-    setHasRestored(true);
-  }, []);
-
-  useEffect(() => {
-    if (hasRestored) {
-      localStorage.setItem("chatMessages", JSON.stringify(messages));
-    }
-  }, [messages, hasRestored]);
-
+  // Tự động cuộn xuống cuối (giữ nguyên)
   useEffect(() => {
     if (chatContainerRef.current && visible) {
       setTimeout(() => {
@@ -69,12 +44,12 @@ const FloatingChat = () => {
 
   const handleOpenChat = () => {
     setVisible(true);
-    if (hasRestored && messages.length === 0) {
+    if (messages.length === 0) {
       setMessages([
         {
           id: Date.now(),
           sender: "bot",
-          text: "Xin chào! Tôi là trợ lý kho thông minh. Tôi có thể giúp gì cho bạn hôm nay?",
+          text: "Xin chào! Tôi là trợ lý kho thông minh. Tôi có thể giúp gì thêm cho bạn?",
         },
       ]);
     }
@@ -92,7 +67,7 @@ const FloatingChat = () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          sessionId: getSessionId(),
+          sessionId: getSessionId(), // Gửi ID cố định
           message: input.trim(),
           userId,
         }),
@@ -202,28 +177,24 @@ const FloatingChat = () => {
                       color: msg.sender === "user" ? "#fff" : "#333",
                       padding: "10px 14px",
                       borderRadius: 18,
-                      maxWidth: "85%", // Tăng nhẹ width để hiển thị bảng/list đẹp hơn
+                      maxWidth: "85%",
                       boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-                      // CSS để render Markdown đẹp hơn
                       fontSize: "14px",
                       lineHeight: "1.5",
                     }}
                   >
-                    {/* 2️⃣ SỬ DỤNG REACT-MARKDOWN ĐỂ RENDER */}
                     {msg.sender === "user" ? (
                       msg.text
                     ) : (
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
                         components={{
-                          // Tùy chỉnh đoạn văn
                           p: ({ node, ...props }) => (
                             <p
                               style={{ margin: "4px 0", lineHeight: "1.6" }}
                               {...props}
                             />
                           ),
-                          // Biến dấu --- thành đường kẻ mảnh tinh tế
                           hr: () => (
                             <hr
                               style={{
@@ -233,7 +204,6 @@ const FloatingChat = () => {
                               }}
                             />
                           ),
-                          // Tối ưu danh sách
                           ul: ({ node, ...props }) => (
                             <ul
                               style={{
@@ -250,7 +220,6 @@ const FloatingChat = () => {
                               {...props}
                             />
                           ),
-                          // Làm nổi bật các con số trong thẻ code ``
                           code: ({ node, ...props }) => (
                             <code
                               style={{
@@ -264,7 +233,6 @@ const FloatingChat = () => {
                               {...props}
                             />
                           ),
-                          // Tùy chỉnh chữ đậm
                           strong: ({ node, ...props }) => (
                             <strong
                               style={{ color: "#262626", fontWeight: "700" }}

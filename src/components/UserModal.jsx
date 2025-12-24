@@ -104,7 +104,7 @@ export default function UserModal({
           rules={[{ required: true, message: "Chọn ít nhất 1 vai trò" }]}
         >
           <Select
-            mode="multiple"
+            // mode="multiple"
             options={[
               { label: "ADMIN", value: "ADMIN" },
               { label: "STAFF", value: "STAFF" },

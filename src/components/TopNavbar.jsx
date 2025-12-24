@@ -23,6 +23,7 @@ import {
 import AuthService from "../service/AuthenticationService";
 import { getUserIdFromToken } from "../service/localStorageService";
 import UserService from "../service/UserService";
+import ProfileModal from "./ProfileModal";
 
 const { Header } = Layout;
 
@@ -30,6 +31,8 @@ export default function TopNavbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const [user, setUser] = useState();
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const selectedKey =
     location.pathname === "/" ? "home" : location.pathname.replace("/", "");
@@ -41,6 +44,36 @@ export default function TopNavbar() {
 
   const handleLogin = () => {
     navigate("/");
+  };
+
+  const handleUpdateProfile = async (values, callback) => {
+    setLoading(true);
+    try {
+      await UserService.update(user.id, values);
+      await fetchUser();
+      callback();
+    } catch (error) {
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChangePassword = async (values, callback) => {
+    setLoading(true);
+    try {
+      const request = {
+        oldPassword: values.oldPassword,
+        newPassword: values.newPassword,
+        confirmNewPassword: values.confirmPassword,
+      };
+
+      const response = await UserService.changePassword(user.id, request);
+      console.log("Change password response:", response);
+      callback();
+    } catch (error) {
+    } finally {
+      setLoading(false);
+    }
   };
 
   const fetchUser = async () => {
@@ -147,7 +180,11 @@ export default function TopNavbar() {
       items={[
         {
           key: "profile",
-          label: <NavLink to="/admin-accounts">Thông tin cá nhân</NavLink>,
+          label: (
+            <span onClick={() => setIsProfileOpen(true)}>
+              Thông tin cá nhân
+            </span>
+          ),
           icon: <UserOutlined />,
         },
         { type: "divider" },
@@ -223,6 +260,14 @@ export default function TopNavbar() {
           </span>
         </div>
       </Dropdown>
+      <ProfileModal
+        open={isProfileOpen}
+        initialValues={user}
+        loading={loading}
+        onCancel={() => setIsProfileOpen(false)}
+        onUpdate={handleUpdateProfile}
+        onChangePassword={handleChangePassword}
+      />
     </Header>
   );
 }
